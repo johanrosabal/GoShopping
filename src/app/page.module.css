@@ -1,142 +1,308 @@
 .page {
-  --background: #fafafa;
-  --foreground: #fff;
+  background: var(--bg-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-  --text-primary: #000;
-  --text-secondary: #666;
-
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-  --button-secondary-border: #ebebeb;
-
+/* Cinematic Hero */
+.hero {
+  position: relative;
+  height: 75vh;
+  min-height: 600px;
   display: flex;
-  flex: 1;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-family: var(--font-geist-sans);
-  background-color: var(--background);
+  background: #000;
+  overflow: hidden;
 }
 
-.main {
-  display: flex;
-  flex: 1;
+.heroBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  max-width: 800px;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  background-color: var(--foreground);
-  padding: 120px 60px;
+  height: 100%;
+  z-index: 1;
 }
 
-.intro {
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+  filter: saturate(0.8) brightness(0.7);
+}
+
+.heroOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, rgba(0,0,0,0.9) 20%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%);
+  z-index: 2;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.heroVisual {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
+  justify-content: center;
+  align-items: center;
+  animation: float 6s ease-in-out infinite;
+}
+
+.heroVisual img {
+  width: 120%;
+  height: auto;
+  filter: drop-shadow(0 20px 50px rgba(0,0,0,0.8));
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 14px;
+  background: rgba(197, 160, 89, 0.1);
+  border: 1px solid var(--brand-accent);
+  color: var(--brand-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: 24px;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.heroTitle {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  line-height: 1;
+  font-weight: 900;
+  margin-bottom: 24px;
+  letter-spacing: -0.02em;
+  animation: fadeInUp 1s ease-out 0.2s both;
+}
+
+.textHighlight {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.8);
+  display: block;
+}
+
+.heroDesc {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  margin-bottom: 48px;
+  max-width: 500px;
+  line-height: 1.6;
+  animation: fadeInUp 1.2s ease-out 0.4s both;
+}
+
+.heroActions {
+  display: flex;
+  gap: 20px;
+  animation: fadeInUp 1.4s ease-out 0.6s both;
+}
+
+.btnPrimary {
+  background: var(--brand-primary);
+  color: var(--bg-primary);
+  padding: 16px 40px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btnPrimary:hover {
+  background: var(--brand-accent);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(197, 160, 89, 0.4);
+}
+
+.btnSecondary {
+  background: transparent;
+  color: var(--text-primary);
+  padding: 16px 40px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btnSecondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--text-primary);
+}
+
+/* Category Lookbook */
+.sectionTitle {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.sectionTitle span {
+  display: block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: var(--brand-accent);
+  margin-bottom: 12px;
+}
+
+.sectionTitle h2 {
+  font-size: 3rem;
+  font-weight: 800;
+}
+
+.categories {
+  padding: 80px 0;
+  background: var(--bg-primary);
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr;
+  grid-template-rows: 500px;
   gap: 24px;
 }
 
-.intro h1 {
-  max-width: 320px;
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 48px;
-  letter-spacing: -2.4px;
-  text-wrap: balance;
-  color: var(--text-primary);
-}
-
-.intro p {
-  max-width: 440px;
-  font-size: 18px;
-  line-height: 32px;
-  text-wrap: balance;
-  color: var(--text-secondary);
-}
-
-.intro a {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.ctas {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  max-width: 440px;
-  gap: 16px;
-  font-size: 14px;
-}
-
-.ctas a {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 128px;
-  border: 1px solid transparent;
-  transition: 0.2s;
+.categoryItem {
+  position: relative;
+  overflow: hidden;
   cursor: pointer;
-  width: fit-content;
-  font-weight: 500;
 }
 
-a.primary {
-  background: var(--text-primary);
-  color: var(--background);
-  gap: 8px;
+.categoryItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-a.secondary {
-  border-color: var(--button-secondary-border);
+.categoryItem:hover img {
+  transform: scale(1.1);
 }
 
-/* Enable hover only on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
-    background: var(--button-primary-hover);
-    border-color: transparent;
-  }
+.categoryContent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 40px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  z-index: 5;
+}
 
-  a.secondary:hover {
-    background: var(--button-secondary-hover);
-    border-color: transparent;
+.categoryContent h3 {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.categoryContent span {
+  font-size: 0.8rem;
+  color: var(--brand-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Featured Products */
+.featured {
+  padding: 80px 0;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 32px;
+}
+
+/* Features */
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  padding: 60px 0;
+}
+
+.featureItem {
+  text-align: center;
+  padding: 40px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+}
+
+.featureItem:hover {
+  border-color: var(--brand-accent);
+  transform: translateY(-10px);
+}
+
+.featureIcon {
+  color: var(--brand-accent);
+  margin-bottom: 24px;
+  display: inline-block;
+}
+
+.featureItem h3 {
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+}
+
+.featureItem p {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (max-width: 600px) {
-  .main {
-    padding: 48px 24px;
+@media (max-width: 1024px) {
+  .categoryGrid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 400px 400px;
   }
-
-  .intro {
-    gap: 16px;
-  }
-
-  .intro h1 {
-    font-size: 32px;
-    line-height: 40px;
-    letter-spacing: -1.92px;
+  .categoryItem:nth-child(3) {
+    grid-column: span 2;
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .logo {
-    filter: invert();
+@media (max-width: 768px) {
+  .features {
+    grid-template-columns: 1fr;
   }
-
-  .page {
-    --background: #000;
-    --foreground: #000;
-
-    --text-primary: #ededed;
-    --text-secondary: #999;
-
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
-    --button-secondary-border: #1a1a1a;
+  .categoryGrid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, 350px);
+  }
+  .categoryItem:nth-child(3) {
+    grid-column: span 1;
   }
 }

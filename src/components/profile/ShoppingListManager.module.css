@@ -1,0 +1,186 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.listCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.listHeader {
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.listInfo h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  letter-spacing: 0.05em;
+  color: var(--brand-accent);
+}
+
+.listStats {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 12px;
+}
+
+.actionBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-tertiary);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.actionBtn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.deleteBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--status-error);
+  border-color: var(--status-error);
+}
+
+.itemsGrid {
+  padding: 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.itemCard {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  position: relative;
+  transition: var(--transition);
+}
+
+.itemCard:hover {
+  border-color: var(--brand-accent);
+}
+
+.itemImage {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.itemInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.itemName {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.itemPrice {
+  font-weight: 700;
+  color: var(--brand-accent);
+  font-size: 0.9rem;
+}
+
+.removeItem {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.itemCard:hover .removeItem {
+  opacity: 1;
+}
+
+.removeItem:hover {
+  color: var(--status-error);
+}
+
+.emptyList {
+  padding: 60px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.listFooter {
+  padding: 20px 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.addToCartList {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid var(--brand-accent);
+  color: var(--brand-accent);
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.addToCartList:hover {
+  background: var(--brand-accent);
+  color: black;
+}
+
+.emptyState {
+  padding: 100px 0;
+  text-align: center;
+}
+
+.emptyState h2 {
+  font-size: 2rem;
+  margin-bottom: 16px;
+}
+
+.emptyState p {
+  color: var(--text-tertiary);
+  margin-bottom: 32px;
+}

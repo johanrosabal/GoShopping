@@ -1,0 +1,54 @@
+.toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  background: transparent;
+  transition: var(--transition);
+  overflow: hidden;
+  position: relative;
+}
+
+.toggle:hover {
+  background: var(--brand-light);
+  transform: translateY(-2px);
+}
+
+.iconWrapper {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sun, .moon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: opacity 0.3s, transform 0.5s;
+}
+
+/* Dark mode state (Default) */
+.dark .sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+
+.dark .moon {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+/* Light mode state */
+.light .sun {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+.light .moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}

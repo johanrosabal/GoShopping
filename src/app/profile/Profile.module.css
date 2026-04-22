@@ -1,0 +1,359 @@
+.profilePage {
+  padding: 40px 0;
+  min-height: calc(100vh - 100px);
+}
+
+.header {
+  margin-bottom: 40px;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.accent {
+  color: var(--brand-accent);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 40px;
+}
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tabBtn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tabBtn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--brand-accent);
+  color: var(--text-primary);
+}
+
+.tabBtn.active {
+  background: rgba(197, 160, 89, 0.1);
+  border-color: var(--brand-accent);
+  color: var(--brand-accent);
+}
+
+.content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  padding: 40px;
+  animation: fadeIn 0.4s ease;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.sectionHeader h2 {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inputGroup label {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputWrapper svg {
+  position: absolute;
+  left: 12px;
+  color: var(--text-tertiary);
+}
+
+.inputWrapper input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.inputWrapper input:focus {
+  border-color: var(--brand-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(197, 160, 89, 0.2);
+}
+
+.addressCard {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 24px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  transition: all 0.2s;
+}
+
+.addressCard:hover {
+  border-color: var(--brand-accent);
+}
+
+.addressInfo h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.defaultBadge {
+  font-size: 0.6rem;
+  background: var(--brand-accent);
+  color: black;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.addressInfo p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.notificationItem {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.notificationItem:last-child {
+  border-bottom: none;
+}
+
+.notificationItem:hover {
+  background: var(--bg-tertiary);
+}
+
+.notificationItem.unread {
+  background: rgba(197, 160, 89, 0.05);
+  border-left: 3px solid var(--brand-accent);
+}
+
+.notifContent h4 {
+  margin-bottom: 4px;
+}
+
+.notifContent p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.notifTime {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+}
+
+.saveBtn {
+  background: var(--brand-accent);
+  color: black;
+  border: 1px solid var(--brand-accent);
+  padding: 14px 28px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 10px;
+  border-radius: 4px;
+}
+
+.cancelBtn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 14px 28px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 10px;
+  border-radius: 4px;
+}
+
+.cancelBtn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.saveBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.addBtn {
+  background: transparent;
+  color: var(--brand-accent);
+  border: 1px solid var(--brand-accent);
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addBtn:hover {
+  background: var(--brand-accent);
+  color: black;
+}
+
+.deleteBtn {
+  color: #ff4444;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.deleteBtn:hover {
+  opacity: 1;
+}
+
+.gpsBtn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--brand-accent);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.gpsBtn:hover {
+  border-color: var(--brand-accent);
+  background: rgba(197, 160, 89, 0.1);
+}
+
+.gpsBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mapControlsHint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(197, 160, 89, 0.05);
+  border-left: 3px solid var(--brand-accent);
+  padding: 12px 16px;
+  margin: 10px 0 20px 0;
+  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.mapControlsHint p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.mapControlsHint strong {
+  color: var(--brand-accent);
+}
+
+.mapLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--brand-accent);
+  margin-top: 8px;
+  font-weight: 600;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.mapLink:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

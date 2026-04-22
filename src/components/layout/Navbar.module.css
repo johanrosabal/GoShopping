@@ -1,0 +1,136 @@
+.navbar {
+  height: var(--header-height);
+  width: 100%;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+}
+
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.logo {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.accent {
+  color: var(--brand-accent);
+}
+
+.center {
+  flex: 1;
+  max-width: 600px;
+  margin: 0 40px;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.searchBar:focus-within {
+  background: var(--bg-secondary);
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 4px rgba(197, 160, 89, 0.1);
+}
+
+.searchIcon {
+  color: var(--text-tertiary);
+  margin-right: 12px;
+}
+
+.searchBar input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  color: var(--text-primary);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconBtn, .cartBtn, .menuBtn {
+  padding: 8px;
+  border-radius: 0;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover, .cartBtn:hover, .menuBtn:hover {
+  background: var(--brand-light);
+  transform: translateY(-2px);
+}
+
+.cartBtn {
+  position: relative;
+}
+
+.cartCount {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--brand-accent);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-primary);
+}
+
+.userSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.userName {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: block;
+}
+
+@media (max-width: 1024px) {
+  .userName {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .center {
+    display: none;
+  }
+}

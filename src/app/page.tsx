@@ -1,65 +1,165 @@
-import Image from "next/image";
+import { ShoppingBag, Star, ShieldCheck, Zap, ArrowRight, ImageIcon } from "lucide-react";
+import { getProducts } from "@/lib/services/products";
+import { getCategories } from "@/lib/services/categories";
+import Link from "next/link";
 import styles from "./page.module.css";
 
-export default function Home() {
+export default async function Home() {
+  // Fetch featured products
+  const allProducts = await getProducts();
+  const featuredProducts = allProducts
+    .filter(p => p.featured && p.isActive !== false)
+    .slice(0, 4);
+
+  // Fetch premium categories
+  const categories = await getCategories();
+  const premiumCategories = categories
+    .filter(c => c.isPremium)
+    .slice(0, 3); // Limit to top 3 for the lookbook
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+        
+        {/* Cinematic Hero Section */}
+        <section className={styles.hero}>
+          <div className={styles.heroBackground}>
+            <img 
+              src="/images/home/hero_elite.png" 
+              alt="Elite Luxury" 
+              className={styles.heroImage}
             />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+            <div className={styles.heroOverlay}></div>
+          </div>
+          
+          <div className="container" style={{ position: 'relative', zIndex: 10 }}>
+            <div className={styles.heroContent}>
+              <div className="animate">
+                <span className={styles.badge}>Nueva Temporada 2026</span>
+                <h1 className={styles.heroTitle}>
+                  La Definición de <span className={styles.textHighlight}>Excelencia</span>
+                </h1>
+                <p className={styles.heroDesc}>
+                  Curaduría exclusiva de piezas tecnológicas y de autor diseñadas para quienes no aceptan menos que lo extraordinario.
+                </p>
+                <div className={styles.heroActions}>
+                  <Link href="/catalog" className={styles.btnPrimary}>
+                    Explorar Catálogo
+                  </Link>
+                  <Link href="/about" className={styles.btnSecondary}>
+                    Nuestra Filosofía
+                  </Link>
+                </div>
+              </div>
+
+              <div className={`${styles.heroVisual} animate`} style={{ animationDelay: '0.4s' }}>
+                <img 
+                  src="/images/home/hero_highlight.png" 
+                  alt="Elite Technology Highlight" 
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Brand Features Section (Trust Bar) */}
+        <section className="container">
+          <div className={styles.features}>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <Zap size={40} />
+              </div>
+              <h3>Entrega Inmediata</h3>
+              <p>Logística de vanguardia garantizando envíos el mismo día dentro del Gran Área Metropolitana.</p>
+            </div>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <ShieldCheck size={40} />
+              </div>
+              <h3>Garantía de Autenticidad</h3>
+              <p>Cada pieza es sometida a un riguroso proceso de verificación por especialistas antes de su entrega.</p>
+            </div>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <Star size={40} />
+              </div>
+              <h3>Soporte Executive</h3>
+              <p>Atención personalizada multicanal para una experiencia de post-venta al nivel de su inversión.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Categories Lookbook */}
+        {premiumCategories.length > 0 && (
+          <section className={styles.categories}>
+            <div className="container">
+              <div className={styles.sectionTitle}>
+                <span>Colecciones Curadas</span>
+                <h2>Categorías Premium</h2>
+              </div>
+              
+              <div className={styles.categoryGrid}>
+                {premiumCategories.map(cat => (
+                  <Link key={cat.id} href={`/catalog?category=${cat.name}`} className={styles.categoryItem} style={{ textDecoration: 'none' }}>
+                    {cat.imageUrl ? (
+                      <img src={cat.imageUrl} alt={cat.name} />
+                    ) : (
+                      <div style={{ height: '350px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
+                        <ImageIcon size={48} />
+                      </div>
+                    )}
+                    <div className={styles.categoryContent}>
+                      <span>{cat.tagline || 'Essential Collection'}</span>
+                      <h3>{cat.displayTitle || cat.name}</h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Featured Selection */}
+        {featuredProducts.length > 0 && (
+          <section className={styles.featured}>
+            <div className="container">
+              <div className={styles.sectionTitle} style={{ textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <span>Piezas Maestras</span>
+                  <h2>Selección Elite</h2>
+                </div>
+                <Link href="/catalog" style={{ color: 'var(--brand-accent)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', marginBottom: '12px' }}>
+                  Ver todo <ArrowRight size={16} />
+                </Link>
+              </div>
+
+              <div className={styles.productGrid}>
+                {featuredProducts.map(product => (
+                  <Link key={product.id} href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', overflow: 'hidden', transition: 'all 0.3s' }} className="animate hover-up">
+                      <div style={{ height: '300px', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </div>
+                      <div style={{ padding: '24px' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--brand-accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{product.category}</span>
+                        <h3 style={{ margin: '8px 0', fontSize: '1.2rem' }}>{product.name}</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>₡{product.price.toLocaleString()}</span>
+                          <ShoppingBag size={18} color="var(--brand-accent)" />
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
       </main>
     </div>
   );

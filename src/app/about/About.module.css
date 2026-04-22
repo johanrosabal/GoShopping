@@ -1,0 +1,98 @@
+.page {
+  min-height: 100vh;
+  padding: 80px 0;
+  background: var(--bg-primary);
+}
+
+.hero {
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto 100px;
+}
+
+.hero h1 {
+  font-size: 4rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 24px;
+}
+
+.hero p {
+  font-size: 1.5rem;
+  color: var(--brand-accent);
+  font-weight: 300;
+  line-height: 1.4;
+}
+
+.contentWrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.accentLine {
+  width: 60px;
+  height: 2px;
+  background: var(--brand-accent);
+  margin-bottom: 40px;
+}
+
+.aboutBody {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+
+.aboutBody p {
+  margin-bottom: 32px;
+}
+
+.aboutBody strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  margin-top: 100px;
+  padding-top: 80px;
+  border-top: 1px solid var(--border);
+}
+
+.valueCard {
+  padding: 32px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.valueCard:hover {
+  border-color: var(--brand-accent);
+  transform: translateY(-8px);
+}
+
+.valueCard h3 {
+  font-size: 1.4rem;
+  margin-bottom: 16px;
+}
+
+.valueCard p {
+  color: var(--text-tertiary);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+  
+  .hero p {
+    font-size: 1.2rem;
+  }
+  
+  .page {
+    padding: 60px 20px;
+  }
+}

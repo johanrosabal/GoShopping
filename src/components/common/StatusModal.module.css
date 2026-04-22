@@ -1,0 +1,98 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 99999;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  padding: 40px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+  text-align: center;
+  animation: modalScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScaleIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.iconWrapper {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.content h3 {
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.content p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.primaryBtn {
+  flex: 1;
+  background: var(--brand-accent);
+  color: #000;
+  padding: 14px 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+  border: none;
+  transition: var(--transition);
+}
+
+.primaryBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.secondaryBtn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  padding: 14px 28px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.secondaryBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
+/* Type Specifics */
+.error { border-top: 4px solid var(--status-error); }
+.success { border-top: 4px solid var(--status-success); }
+.warning { border-top: 4px solid var(--status-warning); }
+.confirm { border-top: 4px solid var(--brand-accent); }
+.loading { border-top: 4px solid var(--brand-accent); }

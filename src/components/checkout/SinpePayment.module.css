@@ -1,0 +1,91 @@
+.sinpe {
+  margin-top: 24px;
+  padding: 24px;
+  background: var(--bg-primary);
+  border-radius: 0;
+  border: 1px dashed var(--border);
+  animation: fadeIn 0.4s ease-out;
+}
+
+.instruction {
+  display: flex;
+  gap: 12px;
+  background: rgba(245, 158, 10, 0.1);
+  padding: 16px;
+  border-radius: 0;
+  margin-bottom: 24px;
+  color: var(--brand-primary);
+  font-size: 0.95rem;
+  align-items: center;
+}
+
+.copyBtn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copyBtn:hover {
+  background: var(--bg-primary);
+  border-color: var(--brand-accent);
+  color: var(--brand-accent);
+  transform: scale(1.1);
+}
+
+.instruction strong {
+  font-weight: 700;
+}
+
+.uploadArea {
+  width: 100%;
+}
+
+.uploadLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  border: 2px dashed var(--border);
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--bg-secondary);
+}
+
+.uploadLabel:hover {
+  border-color: var(--brand-accent);
+  background: rgba(245, 158, 10, 0.05);
+}
+
+.placeholder, .fileSelected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+
+.fileSelected span {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.disclaimer {
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

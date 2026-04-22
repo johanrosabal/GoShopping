@@ -1,0 +1,142 @@
+.editorContainer {
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar button {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.toolbar button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--brand-accent);
+}
+
+.editable {
+  flex: 1;
+  padding: 16px;
+  color: var(--text-primary);
+  outline: none;
+  min-height: 150px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.editable:empty:before {
+  content: attr(data-placeholder);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.editable h2 {
+  color: var(--brand-accent);
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.editable ul {
+  padding-left: 20px;
+  list-style-type: square;
+}
+
+.editable a {
+  color: var(--brand-accent);
+  text-decoration: underline;
+}
+
+/* Link Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.linkModal {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  animation: modalIn 0.3s ease-out;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.linkModal h4 {
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.9rem;
+  color: var(--brand-accent);
+}
+
+.linkModal input {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  outline: none;
+}
+
+.linkModal input:focus {
+  border-color: var(--brand-accent);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.modalActions button {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.modalActions .confirmBtn {
+  background: var(--brand-accent);
+  color: #000;
+  border-color: var(--brand-accent);
+  font-weight: 700;
+}

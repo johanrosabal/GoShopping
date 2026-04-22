@@ -1,0 +1,50 @@
+.selector {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--bg-tertiary);
+  position: relative;
+}
+
+.option:hover {
+  border-color: var(--brand-accent);
+  background: var(--bg-primary);
+}
+
+.option.active {
+  border-color: var(--brand-accent);
+  background: rgba(245, 158, 10, 0.05);
+  box-shadow: 0 0 0 4px rgba(245, 158, 10, 0.1);
+}
+
+.info {
+  margin-left: 20px;
+  flex: 1;
+}
+
+.info h4 {
+  margin-bottom: 4px;
+  font-size: 1.1rem;
+}
+
+.info p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.check {
+  color: var(--brand-accent);
+  position: absolute;
+  right: 24px;
+}
