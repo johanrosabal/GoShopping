@@ -74,8 +74,7 @@ export const subscribeToNotifications = (userId: string, callback: (notification
   const notifRef = collection(db, NOTIFICATIONS_COLLECTION);
   const q = query(
     notifRef, 
-    where('userId', '==', userId), 
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
 
   return onSnapshot(q, (snapshot) => {
@@ -83,6 +82,14 @@ export const subscribeToNotifications = (userId: string, callback: (notification
       id: doc.id,
       ...doc.data()
     })) as Notification[];
-    callback(notifications);
+    
+    // Sort in memory to avoid composite index requirement
+    const sorted = notifications.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis() || 0;
+      const timeB = b.createdAt?.toMillis() || 0;
+      return timeB - timeA;
+    });
+    
+    callback(sorted);
   });
 };

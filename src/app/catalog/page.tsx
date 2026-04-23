@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import { Star, ShoppingCart, Loader2, Database, Eye, Heart } from 'lucide-react';
 import Link from 'next/link';
-import { Product, getProducts, getEffectivePrice } from '@/lib/services/products';
+import { Product, getProducts, getEffectivePrice, subscribeToAllProducts } from '@/lib/services/products';
 import { Category, getCategories } from '@/lib/services/categories';
 import { seedProducts } from '@/lib/seed';
 import { useCart } from '@/context/CartContext';
 import AddToListButton from '@/components/catalog/AddToListButton';
-import StatusModal from '@/components/common/StatusModal';
+import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import styles from './Catalog.module.css';
 
 export default function CatalogPage() {
@@ -18,33 +18,51 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [isSeeding, setIsSeeding] = useState(false);
-  const [modal, setModal] = useState({ 
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
     isOpen: false, 
-    type: 'info' as any, 
+    type: 'info', 
     title: '', 
-    message: '',
-    onConfirm: undefined as (() => void) | undefined
+    message: '' 
   });
   
   const { addToCart } = useCart();
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    const [productsData, categoriesData] = await Promise.all([
-      getProducts(),
-      getCategories()
-    ]);
-    
-    const activeProducts = productsData.filter(p => p.isActive !== false);
-    setProducts(productsData); // Store all data in case we need it, but usually not needed for client
-    setFilteredProducts(activeProducts);
-    setCategories(['Todos', ...categoriesData.map(c => c.name)]);
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    let allProducts: Product[] = [];
+    
+    setLoading(true);
+    
+    // Load categories once
+    const loadCategories = async () => {
+      const categoriesData = await getCategories();
+      setCategories(['Todos', ...categoriesData.map(c => c.name)]);
+    };
+    loadCategories();
+
+    // Subscribe to products in real-time
+    const unsubscribe = subscribeToAllProducts((data) => {
+      allProducts = data;
+      setProducts(data);
+      
+      // Update filtered list based on active category
+      const activeOnly = data.filter(p => p.isActive !== false);
+      if (activeCategory === 'Todos') {
+        setFilteredProducts(activeOnly);
+      } else {
+        setFilteredProducts(activeOnly.filter(p => p.category === activeCategory));
+      }
+      
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [activeCategory]);
 
   const handleFilter = (category: string) => {
     setActiveCategory(category);
@@ -73,7 +91,6 @@ export default function CatalogPage() {
               title: 'Éxito',
               message: '¡Base de datos poblada con éxito! Ahora verás los productos.'
             });
-            await fetchProducts();
           } else {
             setModal({
               isOpen: true,

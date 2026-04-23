@@ -15,11 +15,8 @@
 
 # next.js
 /.next/
-/out/
-
-# Firebase Files
 /.firebase/
-.firebase
+/out/
 
 # production
 /build

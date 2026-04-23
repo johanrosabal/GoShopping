@@ -13,6 +13,7 @@ export default function ThemeToggle() {
       onClick={toggleTheme} 
       title={`Cambiar a modo ${theme === 'light' ? 'oscuro' : 'claro'}`}
       aria-label="Alternar tema"
+      suppressHydrationWarning
     >
       <div className={`${styles.iconWrapper} ${theme === 'light' ? styles.light : styles.dark}`}>
         <Sun className={styles.sun} size={20} />

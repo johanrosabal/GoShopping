@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Home, ShoppingBag, Info, Phone, Package, ShieldCheck, LogIn, LogOut, User, Heart } from 'lucide-react';
+import { X, Home, ShoppingBag, Info, Phone, Package, ShieldCheck, LogIn, LogOut, User, Heart, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { subscribeToNotifications, Notification } from '@/lib/services/notifications';
@@ -58,7 +58,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Heart size={20} /> Mis Listas Elite
               </Link>
             )}
-            <Link href="/admin/orders" className={styles.navLink} onClick={onClose}>
+            <Link href="/profile?tab=orders" className={styles.navLink} onClick={onClose}>
               <Package size={20} /> Mis Pedidos
             </Link>
           </div>
@@ -85,9 +85,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   )}
                 </Link>
                 {isAdmin && (
-                  <Link href="/admin" className={styles.navLink} onClick={onClose}>
-                    <ShieldCheck size={20} color="var(--brand-accent)" /> Panel Admin
-                  </Link>
+                  <>
+                    <Link href="/admin" className={styles.navLink} onClick={onClose}>
+                      <ShieldCheck size={20} color="var(--brand-accent)" /> Panel Admin
+                    </Link>
+                    <Link href="/admin/chats" className={styles.navLink} onClick={onClose}>
+                      <MessageSquare size={20} color="var(--brand-accent)" /> Soporte Chat
+                    </Link>
+                  </>
                 )}
                 <button className={styles.navLink} onClick={() => { logout(); onClose(); }} style={{ border: 'none', background: 'transparent', width: '100%', cursor: 'pointer' }}>
                   <LogOut size={20} /> Cerrar Sesión

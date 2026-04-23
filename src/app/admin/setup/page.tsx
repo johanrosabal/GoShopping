@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, doc, updateDoc, limit } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { ShieldAlert, ShieldCheck, Loader2 } from 'lucide-react';
-import StatusModal from '@/components/common/StatusModal';
+import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import { useRouter } from 'next/navigation';
 
 export default function AdminSetupPage() {
@@ -13,7 +13,18 @@ export default function AdminSetupPage() {
   const [loading, setLoading] = useState(true);
   const [canClaim, setCanClaim] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [modal, setModal] = useState({ isOpen: false, type: 'info' as any, title: '', message: '' });
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
+    isOpen: false, 
+    type: 'info', 
+    title: '', 
+    message: '' 
+  });
   const router = useRouter();
 
   useEffect(() => {

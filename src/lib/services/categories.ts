@@ -78,26 +78,47 @@ export const updateCategory = async (id: string, data: Partial<Category>, imageF
   }
 };
 
-export const deleteCategory = async (id: string, name: string) => {
+export const checkCategoryProducts = async (name: string) => {
   try {
-    const { getDocs, query, where, limit } = await import('firebase/firestore');
-    
-    // 1. Check if there are products with this category
+    const { getDocs, query, where } = await import('firebase/firestore');
     const productsRef = collection(db, 'products');
-    const q = query(productsRef, where('category', '==', name), limit(1));
+    const q = query(productsRef, where('category', '==', name));
+    const snapshot = await getDocs(q);
+    return {
+      hasProducts: !snapshot.empty,
+      count: snapshot.size
+    };
+  } catch (error) {
+    console.error("Error checking products:", error);
+    return { hasProducts: false, count: 0 };
+  }
+};
+
+export const deleteCategory = async (id: string, name: string, reassignTo?: string) => {
+  try {
+    const { getDocs, query, where, writeBatch } = await import('firebase/firestore');
+    const productsRef = collection(db, 'products');
+    const q = query(productsRef, where('category', '==', name));
     const snapshot = await getDocs(q);
 
     if (!snapshot.empty) {
-      throw new Error(`No se puede eliminar: La categoría "${name}" todavía tiene productos asociados.`);
+      if (reassignTo) {
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(productDoc => {
+          batch.update(productDoc.ref, { category: reassignTo });
+        });
+        await batch.commit();
+      } else {
+        return { success: false, requiresReassignment: true, count: snapshot.size };
+      }
     }
 
-    // 2. Proceed with delete
     const categoryDoc = doc(db, CATEGORIES_COLLECTION, id);
     await deleteDoc(categoryDoc);
-    return true;
+    return { success: true };
   } catch (error) {
     console.error("Error deleting category:", error);
-    throw error; // Throw so UI can capture describing message
+    throw error;
   }
 };
 

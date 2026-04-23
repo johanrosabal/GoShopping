@@ -15,7 +15,8 @@ interface UserData {
   uid: string;
   email: string | null;
   displayName: string | null;
-  role: 'client' | 'admin';
+  role: 'client' | 'admin' | 'vendedor' | 'merchant_admin' | 'merchant_seller';
+  merchantId?: string;
   createdAt: any;
 }
 
@@ -24,6 +25,9 @@ interface AuthContextType {
   userData: UserData | null;
   loading: boolean;
   isAdmin: boolean;
+  isMerchant: boolean;
+  isMerchantAdmin: boolean;
+  isMerchantSeller: boolean;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
 }
@@ -86,9 +90,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isAdmin = userData?.role === 'admin';
+  const isMerchantAdmin = userData?.role === 'merchant_admin';
+  const isMerchantSeller = userData?.role === 'merchant_seller';
+  const isMerchant = isMerchantAdmin || isMerchantSeller;
 
   return (
-    <AuthContext.Provider value={{ user, userData, loading, isAdmin, logout, loginWithGoogle }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userData, 
+      loading, 
+      isAdmin, 
+      isMerchant,
+      isMerchantAdmin,
+      isMerchantSeller,
+      logout, 
+      loginWithGoogle 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAllOrders, updateOrderStatus } from '@/lib/services/orders';
+import { getAllOrders, updateOrderStatus, subscribeToAllOrders } from '@/lib/services/orders';
 import { Eye, Check, X, Clock, ExternalLink, Loader2, Plus } from 'lucide-react';
-import StatusModal from '@/components/common/StatusModal';
+import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import styles from '../admin.module.css';
 
 export default function AdminOrdersPage() {
@@ -12,24 +12,32 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [modal, setModal] = useState({ isOpen: false, type: 'error' as any, title: '', message: '' });
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    const data = await getAllOrders();
-    setOrders(data);
-    setLoading(false);
-  };
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
+    isOpen: false, 
+    type: 'error', 
+    title: '', 
+    message: '' 
+  });
 
   useEffect(() => {
-    fetchOrders();
+    setLoading(true);
+    const unsubscribe = subscribeToAllOrders((data) => {
+      setOrders(data);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     setIsUpdating(true);
     const success = await updateOrderStatus(id, newStatus);
     if (success) {
-      await fetchOrders();
       setSelectedOrder(null);
     } else {
       setModal({
@@ -47,7 +55,7 @@ export default function AdminOrdersPage() {
       <header className={styles.header}>
         <h1>Panel de <span className={styles.accent}>Pedidos</span></h1>
         <div className={styles.controls}>
-          <button className={styles.viewBtn} onClick={fetchOrders}>Refrescar</button>
+          {/* Real-time synchronization active */}
         </div>
       </header>
 
@@ -75,7 +83,7 @@ export default function AdminOrdersPage() {
                   <td>
                     <div style={{ fontWeight: 600 }}>#{order.id.slice(-6)}</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
-                      {order.createdAt?.toDate().toLocaleDateString()}
+                      {order.createdAt?.toDate().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
                   </td>
                   <td>
@@ -215,7 +223,19 @@ export default function AdminOrdersPage() {
                         )}
                       </div>
                     ) : (
-                      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Procesado automáticamente vía PayPal Checkout.</p>
+                      <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>ID Transacción:</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                            {selectedOrder.transactionId || 
+                             (selectedOrder.notes?.includes('PayPal ID:') ? selectedOrder.notes.split('PayPal ID: ')[1] : 'Confirmado')}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>Email Pagador:</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{selectedOrder.payerEmail || 'PayPal Verified Account'}</span>
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -232,14 +252,16 @@ export default function AdminOrdersPage() {
                         )}
                       </button>
                     )}
-                    <button 
-                      className={styles.clearBtn}
-                      style={{ width: '100%', padding: '12px' }}
-                      onClick={() => handleUpdateStatus(selectedOrder.id, 'failed')}
-                      disabled={isUpdating}
-                    >
-                      {selectedOrder.status === 'failed' ? 'Pedido Cancelado' : 'Rechazar / Cancelar'}
-                    </button>
+                    {selectedOrder.status !== 'completed' && (
+                      <button 
+                        className={styles.clearBtn}
+                        style={{ width: '100%', padding: '12px' }}
+                        onClick={() => handleUpdateStatus(selectedOrder.id, 'failed')}
+                        disabled={isUpdating}
+                      >
+                        {selectedOrder.status === 'failed' ? 'Pedido Cancelado' : 'Rechazar / Cancelar'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

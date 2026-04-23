@@ -15,7 +15,15 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
   const editorRef = useRef<HTMLDivElement>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkUrl, setLinkUrl] = useState('https://');
-  const [modal, setModal] = useState({ isOpen: false, title: '', message: '' });
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({ 
+    isOpen: false, 
+    title: '', 
+    message: '' 
+  });
 
   // Sync internal content with external value only when necessary
   useEffect(() => {

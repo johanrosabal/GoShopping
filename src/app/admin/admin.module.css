@@ -5,6 +5,9 @@
 
 .header {
   margin-bottom: 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .accent {
@@ -295,7 +298,19 @@
 
 .mediaSlot:hover {
   border-color: var(--brand-accent);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(212, 175, 55, 0.05);
+}
+
+.emptySlot {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
+
+.emptySlot:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .mediaSlot img, .mediaSlot video {

@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 export interface SiteSettings {
   tagline: string;
@@ -15,9 +15,27 @@ export interface SiteSettings {
   aboutContent: string;
   sinpePhone: string;
   sinpeOwner: string;
+  paypalSandboxClientId: string;
+  paypalLiveClientId: string;
+  paypalMode: 'sandbox' | 'live';
+  paypalEnabled: boolean;
+  usdExchangeRate: number;
+  heroBackgroundImageUrl: string;
+  heroHighlightImageUrl: string;
+  heroBadge: string;
+  heroTitle: string;
+  heroDescription: string;
+}
+
+export interface ExchangeRateEntry {
+  id?: string;
+  rate: number;
+  timestamp: any;
+  createdBy?: string;
 }
 
 const SETTINGS_COLLECTION = 'settings';
+const EXCHANGE_RATES_COLLECTION = 'exchange_rates';
 const GLOBAL_DOC_ID = 'global';
 
 // Default values to prevent UI breaks
@@ -34,7 +52,17 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   aboutHeader: 'Definiendo el estándar del lujo y la exclusividad en cada detalle.',
   aboutContent: '<p>En Go-Shopping, creemos que comprar no es solo una transacción, sino una experiencia de curaduría. Seleccionamos cada pieza con un ojo crítico para garantizar que solo lo extraordinario llegue a tus manos.</p><p>Nuestra misión es democratizar el acceso al diseño de autor y la tecnología de vanguardia, manteniendo siempre un servicio personalizado nivel Executive.</p>',
   sinpePhone: '+506 8888-8888',
-  sinpeOwner: 'Comercio Elite S.A.'
+  sinpeOwner: 'Comercio Elite S.A.',
+  paypalSandboxClientId: '',
+  paypalLiveClientId: '',
+  paypalMode: 'sandbox',
+  paypalEnabled: false,
+  usdExchangeRate: 540,
+  heroBackgroundImageUrl: '/images/home/hero_elite.png',
+  heroHighlightImageUrl: '/images/home/hero_highlight.png',
+  heroBadge: 'Nueva Temporada 2026',
+  heroTitle: 'La Definición de Excellence',
+  heroDescription: 'Curaduría exclusiva de piezas tecnológicas y de autor diseñadas para quienes no aceptan menos que lo extraordinario.'
 };
 
 export const getSiteSettings = async (): Promise<SiteSettings> => {
@@ -75,5 +103,39 @@ export const subscribeToSettings = (callback: (settings: SiteSettings) => void) 
     } else {
       callback(DEFAULT_SETTINGS);
     }
+  });
+};
+
+// Exchange Rate History Functions
+export const addExchangeRateEntry = async (rate: number): Promise<boolean> => {
+  try {
+    const ratesRef = collection(db, EXCHANGE_RATES_COLLECTION);
+    await addDoc(ratesRef, {
+      rate,
+      timestamp: serverTimestamp(),
+      createdBy: 'admin' // Could be updated with actual user id
+    });
+    
+    // Also update the global setting for quick access
+    const settings = await getSiteSettings();
+    await updateSiteSettings({ ...settings, usdExchangeRate: rate });
+    
+    return true;
+  } catch (error) {
+    console.error("Error adding exchange rate entry:", error);
+    return false;
+  }
+};
+
+export const subscribeToExchangeRateHistory = (callback: (history: ExchangeRateEntry[]) => void) => {
+  const ratesRef = collection(db, EXCHANGE_RATES_COLLECTION);
+  const q = query(ratesRef, orderBy('timestamp', 'desc'), limit(10));
+  
+  return onSnapshot(q, (snapshot) => {
+    const history = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as ExchangeRateEntry[];
+    callback(history);
   });
 };

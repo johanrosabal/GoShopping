@@ -3,23 +3,17 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { Loader2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
-// Sub-component to handle smooth recentering without re-mounting the whole MapContainer
+// Sub-component to handle smooth recentering
 function MapRecenter({ center }: { center: [number, number] }) {
   const map = useMap();
-  const prevCenter = useRef<[number, number]>(center);
-
   useEffect(() => {
-    if (center[0] !== prevCenter.current[0] || center[1] !== prevCenter.current[1]) {
-      // If we are at a very low zoom (initial), force a closer zoom on first move
-      const currentZoom = map.getZoom();
-      const targetZoom = currentZoom < 15 ? 17 : currentZoom;
-      map.setView(center, targetZoom, { animate: true });
-      prevCenter.current = center;
+    if (map) {
+      map.setView(center, map.getZoom(), { animate: true });
     }
   }, [center, map]);
-  
   return null;
 }
 
@@ -37,47 +31,46 @@ function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
   return null;
 }
 
-// Guard component to ensure layers are only added once the map instance is stable
-function MapLayersGuard({ children }: { children: React.ReactNode }) {
-  const map = useMap();
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    if (map) {
-      // Small timeout to ensure the DOM container is fully attached
-      const timer = setTimeout(() => setIsReady(true), 50);
-      return () => clearTimeout(timer);
-    }
-  }, [map]);
-
-  if (!isReady) return null;
-  return <>{children}</>;
-}
-
 export default function AddressMap({ initialCenter = [9.9333, -84.0833], onLocationChange }: AddressMapProps) {
   const [position, setPosition] = useState<[number, number]>(initialCenter);
-  const [mounted, setMounted] = useState(false);
+  const [isFullyMounted, setIsFullyMounted] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
 
-  // Safety check to ensure Leaflet only runs on the client
   useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
+    let mounted = true;
+    
+    // HEAVY GUARD: We wait for the host <div> to be physically present in the DOM
+    const checkPresence = () => {
+      if (!mounted) return;
+      if (hostRef.current && document.body.contains(hostRef.current)) {
+        // Wait an extra 500ms for style recalculations
+        setTimeout(() => {
+          if (mounted) setIsFullyMounted(true);
+        }, 500);
+      } else {
+        setTimeout(checkPresence, 300);
+      }
+    };
+
+    checkPresence();
+    return () => { mounted = false; };
   }, []);
 
-  // Sync internal position when initialCenter changes (e.g. from GPS capture or URL paste)
   useEffect(() => {
     if (initialCenter[0] !== position[0] || initialCenter[1] !== position[1]) {
       setPosition(initialCenter);
     }
   }, [initialCenter]);
 
-  // Create custom icon only once
-  const customIcon = useMemo(() => L.divIcon({
-    className: 'custom-div-icon',
-    html: `<div style="background-color: var(--brand-accent); width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid black; display: flex; align-items: center; justify-content: center;"><div style="background: black; width: 8px; height: 8px; border-radius: 50%;"></div></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 24]
-  }), []);
+  const customIcon = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: var(--brand-accent); width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid black; display: flex; align-items: center; justify-content: center;"><div style="background: black; width: 8px; height: 8px; border-radius: 50%;"></div></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 24]
+    });
+  }, []);
 
   const handleMarkerDrag = (e: L.DragEndEvent) => {
     const marker = e.target;
@@ -93,35 +86,54 @@ export default function AddressMap({ initialCenter = [9.9333, -84.0833], onLocat
     onLocationChange(lat, lng);
   };
 
-  if (!mounted) {
-    return <div style={{ height: '300px', width: '100%', marginBottom: '20px', background: 'var(--bg-tertiary)', borderRadius: '4px' }} />;
-  }
-
   return (
-    <div style={{ height: '300px', width: '100%', marginBottom: '20px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border)', position: 'relative' }}>
-      <MapContainer 
-        center={initialCenter} 
-        zoom={17} 
-        style={{ height: '100%', width: '100%' }}
-        scrollWheelZoom={false}
-      >
-        <MapLayersGuard>
+    <div 
+      ref={hostRef} 
+      style={{ 
+        height: '300px', 
+        width: '100%', 
+        marginBottom: '20px', 
+        borderRadius: '4px', 
+        overflow: 'hidden', 
+        border: '1px solid var(--border)', 
+        position: 'relative',
+        background: 'rgba(255,255,255,0.02)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      {!isFullyMounted ? (
+        <div style={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Loader2 className="spin" size={14} />
+          Sincronizando Satélite...
+        </div>
+      ) : (
+        <MapContainer 
+          center={initialCenter} 
+          zoom={17} 
+          style={{ height: '100%', width: '100%' }}
+          scrollWheelZoom={false}
+          key="merchant-address-map-v2"
+        >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            attribution='&copy; OpenStreetMap'
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
-          <Marker 
-            position={position} 
-            draggable={true}
-            icon={customIcon}
-            eventHandlers={{
-              dragend: handleMarkerDrag
-            }}
-          />
+          {customIcon && (
+            <Marker 
+              position={position} 
+              draggable={true}
+              icon={customIcon}
+              eventHandlers={{
+                dragend: handleMarkerDrag
+              }}
+            />
+          )}
           <MapEvents onMapClick={handleMapClick} />
           <MapRecenter center={position} />
-        </MapLayersGuard>
-      </MapContainer>
+        </MapContainer>
+      )}
     </div>
   );
 }

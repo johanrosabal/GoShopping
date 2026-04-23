@@ -14,13 +14,15 @@ import {
   Activity,
   Plus,
   Users,
-  Settings
+  Settings,
+  MessageSquare,
+  Store
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { getAllOrders } from '@/lib/services/orders';
-import { getProducts } from '@/lib/services/products';
+import { subscribeToAllOrders, OrderData } from '@/lib/services/orders';
+import { subscribeToAllProducts, Product } from '@/lib/services/products';
 import styles from './admin.module.css';
 
 export default function AdminPage() {
@@ -31,47 +33,55 @@ export default function AdminPage() {
     pendingOrders: 0,
     totalProducts: 0,
     inventoryValue: 0,
+    totalMerchants: 0,
     recentOrders: [] as any[]
   });
   const router = useRouter();
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push('/');
-    }
-  }, [isAdmin, authLoading, router]);
+    if (!isAdmin) return;
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const [orders, products] = await Promise.all([
-          getAllOrders(),
-          getProducts()
-        ]);
+    let ordersData: any[] = [];
+    let productsData: any[] = [];
 
-        const totalSales = orders
-          .filter(o => o.status === 'completed')
-          .reduce((acc, current) => acc + (current.total || 0), 0);
-          
-        const pending = orders.filter(o => o.status === 'pending').length;
+    const updateStats = () => {
+      const totalSales = ordersData
+        .filter(o => o.status === 'completed')
+        .reduce((acc, current) => acc + (current.total || 0), 0);
+        
+      const pending = ordersData.filter(o => o.status === 'pending').length;
+      const inventoryValue = productsData.reduce((acc, p) => acc + (p.price * (p.stock || 0)), 0);
 
-        const inventoryValue = products.reduce((acc, p) => acc + (p.price * p.stock), 0);
-
-        setStats({
-          totalSales,
-          pendingOrders: pending,
-          totalProducts: products.length,
-          inventoryValue,
-          recentOrders: orders.slice(0, 5)
-        });
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
+      setStats(prev => ({
+        ...prev,
+        totalSales,
+        pendingOrders: pending,
+        totalProducts: productsData.length,
+        inventoryValue,
+        recentOrders: ordersData.slice(0, 5)
+      }));
+      setLoading(false);
     };
 
-    if (isAdmin) fetchDashboardData();
+    const unsubscribeOrders = subscribeToAllOrders((orders) => {
+      ordersData = orders;
+      updateStats();
+    });
+
+    const unsubscribeProducts = subscribeToAllProducts((products) => {
+      productsData = products;
+      updateStats();
+    });
+
+    const { getAllMerchants } = require('@/lib/services/merchants');
+    getAllMerchants().then((data: any[]) => {
+      setStats(prev => ({ ...prev, totalMerchants: data.length }));
+    });
+
+    return () => {
+      unsubscribeOrders();
+      unsubscribeProducts();
+    };
   }, [isAdmin]);
 
   if (authLoading || (loading && isAdmin)) {
@@ -82,8 +92,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
-  if (!isAdmin) return null;
 
   const kpis = [
     {
@@ -101,15 +109,18 @@ export default function AdminPage() {
       desc: 'Requieren atención'
     },
     {
+      label: 'Productos Elite',
+      value: stats.totalProducts.toString(),
+      icon: <Package size={24} />,
       color: 'var(--brand-accent)',
-      desc: 'Productos activos'
+      desc: 'Catálogo global'
     },
     {
-      label: 'Valor del Inventario',
-      value: `₡${stats.inventoryValue.toLocaleString()}`,
-      icon: <CreditCard size={24} />,
-      color: '#3b82f6',
-      desc: 'Capital en stock'
+      label: 'Comercios Afiliados',
+      value: (stats.totalMerchants || 0).toString(),
+      icon: <Store size={24} />,
+      color: '#8b5cf6',
+      desc: 'Socios comerciales'
     }
   ];
 
@@ -156,7 +167,18 @@ export default function AdminPage() {
           <ArrowRight size={20} className={styles.arrow} />
         </Link>
 
-        <Link href="/admin/products" className={`${styles.moduleCard} animate`} style={{ animationDelay: '0.4s' }}>
+        <Link href="/admin/chats" className={`${styles.moduleCard} animate`} style={{ animationDelay: '0.4s' }}>
+          <div className={styles.moduleIcon} style={{ background: 'var(--brand-accent)15', color: 'var(--brand-accent)' }}>
+            <MessageSquare size={32} />
+          </div>
+          <div className={styles.moduleInfo}>
+            <h3>Soporte V.I.P. Chat</h3>
+            <p>Atención al cliente y resolución de casos.</p>
+          </div>
+          <ArrowRight size={20} className={styles.arrow} />
+        </Link>
+
+        <Link href="/admin/products" className={`${styles.moduleCard} animate`} style={{ animationDelay: '0.5s' }}>
           <div className={styles.moduleIcon} style={{ background: 'var(--brand-accent)15', color: 'var(--brand-accent)' }}>
             <Package size={32} />
           </div>
@@ -199,6 +221,28 @@ export default function AdminPage() {
           </div>
           <ArrowRight size={20} className={styles.arrow} />
         </Link>
+
+        <Link href="/admin/merchants" className={`${styles.moduleCard} animate`} style={{ animationDelay: '0.8s' }}>
+          <div className={styles.moduleIcon} style={{ background: '#8b5cf615', color: '#8b5cf6' }}>
+            <Store size={32} />
+          </div>
+          <div className={styles.moduleInfo}>
+            <h3>Ecosistema Marketplace</h3>
+            <p>Directorio de comercios afiliados y gestión de suscripciones.</p>
+          </div>
+          <ArrowRight size={20} className={styles.arrow} />
+        </Link>
+
+        <Link href="/admin/merchants/plans" className={`${styles.moduleCard} animate`} style={{ animationDelay: '0.9s' }}>
+          <div className={styles.moduleIcon} style={{ background: '#f59e0b15', color: '#f59e0b' }}>
+            <Settings size={32} />
+          </div>
+          <div className={styles.moduleInfo}>
+            <h3>Planes de Negocio</h3>
+            <p>Ajustar precios, comisiones y beneficios dinámicos.</p>
+          </div>
+          <ArrowRight size={20} className={styles.arrow} />
+        </Link>
       </div>
 
       {/* Recent Activity */}
@@ -213,8 +257,9 @@ export default function AdminPage() {
             <thead>
               <tr>
                 <th>Cliente</th>
-                <th>Fecha</th>
+                <th>Fecha / Hora</th>
                 <th>Total</th>
+                <th>Pago</th>
                 <th>Estado</th>
                 <th>Acción</th>
               </tr>
@@ -222,7 +267,7 @@ export default function AdminPage() {
             <tbody>
               {stats.recentOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-tertiary)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-tertiary)' }}>
                     No hay actividad reciente para mostrar.
                   </td>
                 </tr>
@@ -230,7 +275,7 @@ export default function AdminPage() {
                 stats.recentOrders.map(order => (
                   <tr key={order.id}>
                     <td style={{ fontWeight: 600 }}>{order.customerName}</td>
-                    <td style={{ color: 'var(--text-tertiary)' }}>{order.createdAt?.toDate().toLocaleDateString()}</td>
+                    <td style={{ color: 'var(--text-tertiary)' }}>{order.createdAt?.toDate().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td style={{ fontWeight: 700, color: 'var(--brand-accent)' }}>₡{order.total?.toLocaleString()}</td>
                     <td>
                       <span className={`${styles.statusBadge} ${styles['status_' + order.status]}`}>
@@ -238,7 +283,12 @@ export default function AdminPage() {
                       </span>
                     </td>
                     <td>
-                      <Link href="/admin/orders" className={styles.viewBtn}>
+                      <span style={{ textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>
+                        {order.paymentMethod}
+                      </span>
+                    </td>
+                    <td>
+                      <Link href={`/admin/orders/${order.id}`} className={styles.viewBtn}>
                         <Eye size={14} />
                       </Link>
                     </td>

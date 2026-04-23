@@ -6,7 +6,8 @@ import {
   orderBy, 
   doc, 
   setDoc,
-  updateDoc 
+  updateDoc,
+  where 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -22,10 +23,12 @@ export interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
-  role: 'admin' | 'client';
+  role: 'admin' | 'client' | 'vendedor' | 'agent' | 'merchant_admin' | 'merchant_seller';
+  merchantId?: string; // Relation to the merchants collection
   phone?: string;
   whatsapp?: string;
   addresses?: UserAddress[];
+  isActive?: boolean;
   createdAt?: any;
 }
 
@@ -61,6 +64,23 @@ export const getUserProfile = async (uid: string) => {
   }
 };
 
+export const getUserByEmail = async (email: string) => {
+  try {
+    const usersRef = collection(db, USERS_COLLECTION);
+    const q = query(usersRef, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { uid: doc.id, ...doc.data() } as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching user by email:", error);
+    return null;
+  }
+};
+
 export const updateUserProfile = async (uid: string, data: Partial<UserProfile>) => {
   try {
     const userRef = doc(db, USERS_COLLECTION, uid);
@@ -72,8 +92,9 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
     return false;
   }
 };
+export const updateUser = updateUserProfile;
 
-export const updateUserRole = async (uid: string, newRole: 'admin' | 'client') => {
+export const updateUserRole = async (uid: string, newRole: UserProfile['role']) => {
   try {
     const userRef = doc(db, USERS_COLLECTION, uid);
     await updateDoc(userRef, { role: newRole });
@@ -81,5 +102,40 @@ export const updateUserRole = async (uid: string, newRole: 'admin' | 'client') =
   } catch (error) {
     console.error("Error updating user role:", error);
     return false;
+  }
+};
+
+export const toggleUserStatus = async (uid: string, currentStatus: boolean) => {
+  try {
+    const userRef = doc(db, USERS_COLLECTION, uid);
+    await updateDoc(userRef, { isActive: !currentStatus });
+    return true;
+  } catch (error) {
+    console.error("Error toggling user status:", error);
+    return false;
+  }
+};
+
+export const deleteUser = async (uid: string) => {
+  try {
+    const { getDocs, query, where, collection } = await import('firebase/firestore');
+    
+    // 1. Check for orders
+    const ordersRef = collection(db, 'orders');
+    const q = query(ordersRef, where('userId', '==', uid));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      throw new Error("SEGURIDAD: No se puede eliminar un usuario con historial de compras. Considera bloquearlo en su lugar.");
+    }
+
+    // 2. Delete
+    const userRef = doc(db, USERS_COLLECTION, uid);
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(userRef);
+    return true;
+  } catch (error: any) {
+    console.error("Error deleting user:", error);
+    throw error;
   }
 };

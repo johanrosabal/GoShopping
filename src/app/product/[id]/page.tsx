@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { ShoppingBag, ArrowLeft, Star, ShieldCheck, Zap, Info, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { getProductById, getEffectivePrice, Product } from '@/lib/services/products';
+import { getProductById, getEffectivePrice, Product, subscribeToProduct } from '@/lib/services/products';
 import { useCart } from '@/context/CartContext';
 import AddToListButton from '@/components/catalog/AddToListButton';
 import styles from '../ProductDetail.module.css';
@@ -16,15 +16,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const { addToCart } = useCart();
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      setLoading(true);
-      const data = await getProductById(id);
+    setLoading(true);
+    const unsubscribe = subscribeToProduct(id, (data) => {
       setProduct(data);
-      if (data) setActiveImage(data.imageUrl);
+      if (data && !activeImage) {
+        setActiveImage(data.imageUrl);
+      }
       setLoading(false);
-    };
-    fetchProduct();
-  }, [id]);
+    });
+    return () => unsubscribe();
+  }, [id, activeImage]);
 
   if (loading) {
     return (

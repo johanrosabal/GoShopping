@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getUserProfile, updateUserProfile, UserProfile, UserAddress } from '@/lib/services/users';
+import { getUserOrders, OrderData, subscribeToUserOrders } from '@/lib/services/orders';
 import { subscribeToNotifications, markAsRead, Notification } from '@/lib/services/notifications';
+import { ChatSession, subscribeToUserChats } from '@/lib/services/chat';
 import { formatCostaRicaPhone } from '@/lib/utils/mask';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   User, 
   MapPin, 
@@ -26,10 +29,15 @@ import {
   Pencil,
   List,
   Search,
-  Info
+  Info,
+  ShoppingBag,
+  Package,
+  ArrowRight,
+  Tag
 } from 'lucide-react';
 import ShoppingListManager from '@/components/profile/ShoppingListManager';
-import StatusModal from '@/components/common/StatusModal';
+import ChatWindow from '@/components/profile/ChatWindow';
+import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import styles from './Profile.module.css';
 
 const AddressMap = dynamic(() => import('@/components/profile/AddressMap'), { 
@@ -37,26 +45,66 @@ const AddressMap = dynamic(() => import('@/components/profile/AddressMap'), {
   loading: () => <div style={{ height: '300px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando mapa...</div>
 });
 
-export default function ProfilePage() {
+function ProfileContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'profile' | 'addresses' | 'notifications' | 'lists'>('profile');
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'profile' | 'addresses' | 'notifications' | 'lists' | 'orders' | 'chat'>('profile');
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [orders, setOrders] = useState<(OrderData & { id: string })[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [userChats, setUserChats] = useState<ChatSession[]>([]);
+  const [selectedChatContext, setSelectedChatContext] = useState<{ chatId: string, orderId?: string, orderNumber?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [modal, setModal] = useState({ isOpen: false, type: 'success' as any, title: '', message: '' });
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
+    isOpen: false, 
+    type: 'success', 
+    title: '', 
+    message: '' 
+  });
 
-  // Sync tab with URL parameter
+  // Sync tab and specific chat from URL parameters
   useEffect(() => {
     const tab = searchParams.get('tab');
+    const chatId = searchParams.get('chatId');
+
     if (tab === 'lists') setActiveTab('lists');
     else if (tab === 'addresses') setActiveTab('addresses');
     else if (tab === 'notifications') setActiveTab('notifications');
+    else if (tab === 'orders') setActiveTab('orders');
+    else if (tab === 'chat') {
+      setActiveTab('chat');
+      if (chatId) {
+        const existingChat = userChats.find(c => c.id === chatId);
+        if (existingChat) {
+          setSelectedChatContext({
+            chatId: existingChat.id,
+            orderId: existingChat.orderId,
+            orderNumber: existingChat.orderNumber
+          });
+        } else {
+          // Fallback: Infer from chatId if possible
+          const isOrderChat = chatId.startsWith('order_');
+          setSelectedChatContext({
+            chatId,
+            orderId: isOrderChat ? chatId.replace('order_', '') : undefined,
+            orderNumber: isOrderChat ? '...' : undefined
+          });
+        }
+      }
+    }
     else if (tab === 'profile') setActiveTab('profile');
-  }, [searchParams]);
+  }, [searchParams, userChats]);
 
   // Address edit state
   const [newAddress, setNewAddress] = useState({ alias: '', detail: '', mapsUrl: '' });
@@ -68,19 +116,34 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      const loadData = async () => {
-        const data = await getUserProfile(user.uid);
-        if (data) setProfile(data);
-        setLoading(false);
+      const loadProfile = async () => {
+        const profileData = await getUserProfile(user.uid);
+        if (profileData) setProfile(profileData);
+        // We set loading false here because orders list has its own subscription
       };
-      loadData();
+      loadProfile();
+
+      // Subscribe to real-time orders
+      const unsubscribeOrders = subscribeToUserOrders(user.uid, (data) => {
+        setOrders(data);
+        setLoading(false);
+      });
 
       // Subscribe to real-time notifications
-      const unsubscribe = subscribeToNotifications(user.uid, (data) => {
+      const unsubscribeNotifications = subscribeToNotifications(user.uid, (data) => {
         setNotifications(data);
       });
 
-      return () => unsubscribe();
+      // Subscribirse a los chats del usuario
+      const unsubscribeChats = subscribeToUserChats(user.uid, (chats) => {
+        setUserChats(chats);
+      });
+
+      return () => {
+        unsubscribeOrders();
+        unsubscribeNotifications();
+        unsubscribeChats();
+      };
     }
   }, [user]);
 
@@ -291,8 +354,36 @@ export default function ProfilePage() {
     if (success) setProfile({ ...profile, addresses: updatedAddresses });
   };
 
-  const handleMarkRead = async (id: string) => {
-    await markAsRead(id);
+  const handleMarkRead = async (notif: Notification) => {
+    // 1. Mark as read immediately in background
+    markAsRead(notif.id).catch(err => console.error("Error marking read:", err));
+    
+    // 2. Direct navigation if it's a chat link
+    if (notif.link && notif.link.includes('chatId=')) {
+      // Direct string parsing to be super safe
+      const chatIdParam = notif.link.split('chatId=')[1];
+      const chatId = chatIdParam ? chatIdParam.split('&')[0] : null;
+      
+      if (chatId) {
+        console.log("Direct Nav to chatId:", chatId);
+        setActiveTab('chat');
+        const isOrderChat = chatId.startsWith('order_');
+        setSelectedChatContext({
+          chatId,
+          orderId: isOrderChat ? chatId.replace('order_', '') : undefined,
+          orderNumber: isOrderChat ? '...' : undefined
+        });
+        
+        // Update URL
+        router.push(notif.link);
+        return;
+      }
+    }
+    
+    // 3. Fallback for other links
+    if (notif.link) {
+      router.push(notif.link);
+    }
   };
 
   if (loading) {
@@ -320,12 +411,6 @@ export default function ProfilePage() {
             <User size={20} /> Datos Personales
           </button>
           <button 
-            className={`${styles.tabBtn} ${activeTab === 'addresses' ? styles.active : ''}`}
-            onClick={() => setActiveTab('addresses')}
-          >
-            <MapPin size={20} /> Direcciones de Entrega
-          </button>
-          <button 
             className={`${styles.tabBtn} ${activeTab === 'notifications' ? styles.active : ''}`}
             onClick={() => setActiveTab('notifications')}
           >
@@ -336,6 +421,24 @@ export default function ProfilePage() {
                 {notifications.filter(n => !n.read).length}
               </span>
             )}
+          </button>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'orders' ? styles.active : ''}`}
+            onClick={() => setActiveTab('orders')}
+          >
+            <Package size={20} /> Mis Pedidos
+          </button>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'chat' ? styles.active : ''}`}
+            onClick={() => setActiveTab('chat')}
+          >
+            <MessageSquare size={20} /> Soporte V.I.P.
+          </button>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'addresses' ? styles.active : ''}`}
+            onClick={() => setActiveTab('addresses')}
+          >
+            <MapPin size={20} /> Direcciones de Entrega
           </button>
           <button 
             className={`${styles.tabBtn} ${activeTab === 'lists' ? styles.active : ''}`}
@@ -404,7 +507,7 @@ export default function ProfilePage() {
             </form>
           )}
 
-          {activeTab === 'lists' && (
+          {activeTab === 'lists' && user && (
             <ShoppingListManager userId={user.uid} />
           )}
 
@@ -570,7 +673,7 @@ export default function ProfilePage() {
                     <div 
                       key={notif.id} 
                       className={`${styles.notificationItem} ${!notif.read ? styles.unread : ''}`}
-                      onClick={() => handleMarkRead(notif.id)}
+                      onClick={() => handleMarkRead(notif)}
                     >
                       <div className={styles.notifIcon}>
                         {notif.type === 'order' && <ShoppingBag size={20} color="var(--brand-accent)" />}
@@ -591,6 +694,203 @@ export default function ProfilePage() {
             </>
           )}
 
+          {activeTab === 'orders' && (
+            <div className="animate">
+              <div className={styles.sectionHeader}>
+                <h2><Package className={styles.accent} /> Historial de Compras</h2>
+              </div>
+              
+              {orders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px', opacity: 0.5 }}>
+                  <Package size={48} style={{ marginBottom: '16px' }} />
+                  <p>Aún no has realizado pedidos elite.</p>
+                  <Link href="/catalog" className={styles.btnPrimary} style={{ marginTop: '20px', display: 'inline-block' }}>
+                    Empezar a Comprar
+                  </Link>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {orders.map(order => (
+                    <div key={order.id} className={styles.addressCard} style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '12px' }}>
+                        <div>
+                          <h4 style={{ margin: 0 }}>Pedido #{order.orderNumber}</h4>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                            Realizado el {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' }) : 'Recientemente'}
+                          </p>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--brand-accent)', fontWeight: 600, textTransform: 'uppercase', marginTop: '4px' }}>
+                            Pago vía: {order.paymentMethod === 'paypal' ? 'PayPal' : 'SINPE Móvil'}
+                          </p>
+                        </div>
+                        <span className={`${styles.defaultBadge} ${styles['status_' + order.status]}`} style={{ 
+                          background: order.status === 'completed' ? '#10b98120' : order.status === 'pending' ? '#f59e0b20' : '#ef444420',
+                          color: order.status === 'completed' ? '#10b981' : order.status === 'pending' ? '#f59e0b' : '#ef4444',
+                          border: 'none',
+                          padding: '4px 12px'
+                        }}>
+                          {order.status === 'pending' ? 'Pendiente' : order.status === 'completed' ? 'Pagado / Listo' : 'Fallido'}
+                        </span>
+                      </div>
+
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.85rem' }}>{order.items.length} {order.items.length === 1 ? 'artículo' : 'artículos'}</span>
+                          <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }}></span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-accent)' }}>₡{order.total.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => {
+                              setSelectedChatContext({
+                                chatId: `order_${order.id}`,
+                                orderId: order.id,
+                                orderNumber: order.orderNumber
+                              });
+                              setActiveTab('chat');
+                            }}
+                            className={styles.addBtn}
+                            style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                          >
+                            <MessageSquare size={14} /> Soporte V.I.P.
+                          </button>
+                          <button 
+                            onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
+                            className={styles.tabBtn}
+                            style={{ fontSize: '0.8rem', padding: '6px 12px', margin: 0, width: 'auto', background: 'rgba(255,255,255,0.05)' }}
+                          >
+                            {expandedOrderId === order.id ? 'Ocultar info' : 'Ver Verificación'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {expandedOrderId === order.id && (
+                        <div style={{ width: '100%', marginTop: '20px', padding: '20px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', animation: 'fadeIn 0.3s ease' }}>
+                          <h5 style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.1em', color: 'var(--brand-accent)', marginBottom: '16px' }}>
+                            Detalles del Pedido
+                          </h5>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                            {order.items.map((item, idx) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                <span>{item.name} x{item.quantity}</span>
+                                <span style={{ color: 'var(--text-secondary)' }}>₡{(item.price * item.quantity).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <h5 style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.1em', color: 'var(--brand-accent)', marginBottom: '12px' }}>
+                            Información de Pago
+                          </h5>
+                          {order.paymentMethod === 'paypal' ? (
+                            <div style={{ background: 'var(--bg-secondary)', padding: '15px', border: '1px solid var(--border)', fontSize: '0.85rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <span style={{ opacity: 0.6 }}>ID Transacción:</span>
+                                <span>{order.transactionId || 'Confirmado automáticamente'}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ opacity: 0.6 }}>Pagado desde:</span>
+                                <span>{order.payerEmail || 'PayPal Account'}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ background: 'var(--bg-secondary)', padding: '15px', border: '1px solid var(--border)', fontSize: '0.85rem' }}>
+                              <p style={{ margin: '0 0 10px 0', opacity: 0.8 }}>SINPE Móvil - Comprobante adjunto</p>
+                              {order.sinpeVoucherUrl ? (
+                                <a href={order.sinpeVoucherUrl} target="_blank" rel="noopener noreferrer">
+                                  <img 
+                                    src={order.sinpeVoucherUrl} 
+                                    alt="Comprobante" 
+                                    style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border)' }} 
+                                  />
+                                </a>
+                              ) : (
+                                <p style={{ color: '#f59e0b', fontSize: '0.75rem' }}>Bajo revisión del equipo administrativo.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'chat' && user && (
+            <div className="animate">
+              <div className={styles.sectionHeader}>
+                <h2><MessageSquare className={styles.accent} /> Soporte V.I.P. Directo</h2>
+                {selectedChatContext && (
+                  <button className={styles.addBtn} onClick={() => setSelectedChatContext(null)}>
+                    <ArrowRight size={16} /> Ver mis casos
+                  </button>
+                )}
+              </div>
+              
+              {!selectedChatContext ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* General Chat Button */}
+                  <div 
+                    className={styles.addressCard} 
+                    style={{ cursor: 'pointer', borderColor: 'var(--brand-accent)' }}
+                    onClick={() => setSelectedChatContext({ chatId: `general_${user.uid}` })}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <div style={{ background: 'var(--brand-accent)', color: 'black', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <MessageSquare size={20} />
+                      </div>
+                      <div>
+                        <h4 style={{ margin: 0 }}>Canal de Soporte General</h4>
+                        <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Consultas sobre envíos, stock o información general.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Orders Chats List */}
+                  {userChats.filter(c => c.type === 'order' && c.status === 'active').length > 0 && (
+                    <div style={{ marginTop: '20px' }}>
+                      <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Casos de Pedidos Activos</h3>
+                      {userChats.filter(c => c.type === 'order' && c.status === 'active').map(chat => (
+                        <div 
+                          key={chat.id} 
+                          className={styles.addressCard} 
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setSelectedChatContext({ 
+                            chatId: chat.id, 
+                            orderId: chat.orderId, 
+                            orderNumber: chat.orderNumber 
+                          })}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <Tag size={18} color="var(--brand-accent)" />
+                              <div>
+                                <h4 style={{ margin: 0 }}>Pedido #{chat.orderNumber}</h4>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>{chat.lastMessage}</p>
+                              </div>
+                            </div>
+                            {chat.unreadCountClient > 0 && (
+                              <span className={styles.defaultBadge}>{chat.unreadCountClient}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <ChatWindow 
+                  chatId={selectedChatContext.chatId}
+                  userId={user.uid} 
+                  userName={user.displayName || 'Cliente Elite'} 
+                  orderId={selectedChatContext.orderId}
+                  orderNumber={selectedChatContext.orderNumber}
+                  onBack={() => setSelectedChatContext(null)}
+                />
+              )}
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -602,5 +902,17 @@ export default function ProfilePage() {
         onClose={() => setModal({ ...modal, isOpen: false })}
       />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
+        <Loader2 className="spin" size={40} color="var(--brand-accent)" />
+      </div>
+    }>
+      <ProfileContent />
+    </Suspense>
   );
 }

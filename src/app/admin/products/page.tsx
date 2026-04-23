@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getProducts, deleteProduct, updateProductStatus, Product } from '@/lib/services/products';
+import { getProducts, deleteProduct, updateProductStatus, Product, subscribeToAllProducts } from '@/lib/services/products';
 import { Plus, Trash2, Loader2, ArrowLeft, Package, AlertCircle, Eye, EyeOff, Pencil, Search, X } from 'lucide-react';
 import { getCategories } from '@/lib/services/categories';
-import StatusModal from '@/components/common/StatusModal';
+import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import Link from 'next/link';
 import styles from '../admin.module.css';
 
@@ -23,28 +23,33 @@ export default function AdminProductsPage() {
     category: '',
     status: ''
   });
-  const [modal, setModal] = useState({ 
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
     isOpen: false, 
-    type: 'info' as any, 
+    type: 'info', 
     title: '', 
-    message: '',
-    onConfirm: undefined as (() => void) | undefined
+    message: '' 
   });
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    const data = await getProducts();
-    setProducts(data);
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchProducts();
+    setLoading(true);
+    const unsubscribe = subscribeToAllProducts((data) => {
+      setProducts(data);
+      setLoading(false);
+    });
+
     const loadCategories = async () => {
       const data = await getCategories();
       setCategories(data.map(c => c.name));
     };
     loadCategories();
+
+    return () => unsubscribe();
   }, []);
 
   const filteredProducts = products.filter(product => {
@@ -80,7 +85,6 @@ export default function AdminProductsPage() {
             title: 'Eliminado',
             message: 'El producto ha sido removido exitosamente.'
           });
-          fetchProducts();
         } else {
           setModal({
             isOpen: true,
@@ -96,9 +100,7 @@ export default function AdminProductsPage() {
   const handleToggleStatus = async (id: string, currentStatus: boolean | undefined) => {
     const newStatus = currentStatus === false ? true : false;
     const success = await updateProductStatus(id, newStatus);
-    if (success) {
-      fetchProducts();
-    } else {
+    if (!success) {
       setModal({
         isOpen: true,
         type: 'error',

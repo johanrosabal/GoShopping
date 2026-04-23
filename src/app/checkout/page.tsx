@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector';
 import SinpePayment from '@/components/checkout/SinpePayment';
+import PayPalPayment from '@/components/checkout/PayPalPayment';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { createOrder, OrderData } from '@/lib/services/orders';
 import { getEffectivePrice } from '@/lib/services/products';
 import { Loader2, CheckCircle } from 'lucide-react';
-import StatusModal from '@/components/common/StatusModal';
+import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import styles from './Checkout.module.css';
 
 export default function CheckoutPage() {
@@ -21,9 +22,15 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [voucherFile, setVoucherFile] = useState<File | null>(null);
-  const [modal, setModal] = useState({ 
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
     isOpen: false, 
-    type: 'error' as any, 
+    type: 'error', 
     title: '', 
     message: '' 
   });
@@ -60,6 +67,43 @@ export default function CheckoutPage() {
         message: 'No logramos procesar tu pedido exclusivo en este momento. Por favor, verifica tu conexión o intenta de nuevo.'
       });
       console.error(error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePayPalSuccess = async (details: any) => {
+    setIsProcessing(true);
+    try {
+      const subtotal = cartTotal / 1.13;
+      const tax = cartTotal - subtotal;
+
+      const orderData: OrderData = {
+        userId: user?.uid,
+        customerName: user?.displayName || 'Cliente Anonimo',
+        email: user?.email || '',
+        items: cart,
+        subtotal: subtotal,
+        tax: tax,
+        total: cartTotal,
+        paymentMethod: 'paypal',
+        status: 'completed',
+        transactionId: details.id,
+        payerEmail: details.payer.email_address,
+        notes: `Pago verificado - PayPal ID: ${details.id}`
+      };
+
+      await createOrder(orderData);
+      setIsSuccess(true);
+      clearCart();
+      setTimeout(() => router.push('/'), 5000);
+    } catch (error) {
+      setModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Error Procesando Pago',
+        message: 'El pago se realizó en PayPal pero no logramos registrar tu pedido. Por favor contacta a soporte con tu ID de transacción.'
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -113,25 +157,31 @@ export default function CheckoutPage() {
           {method === 'paypal' && (
             <section className={styles.section}>
               <h2>2. PayPal Checkout</h2>
-              <div className={styles.paypalPlaceholder}>
-                <p>Integración de PayPal activa</p>
-                <div style={{ marginTop: '20px', fontSize: '0.8rem' }}>
-                  ( El pago se procesará de forma segura )
-                </div>
-              </div>
+              <PayPalPayment 
+                amount={cartTotal} 
+                onSuccess={handlePayPalSuccess}
+                onError={(err) => setModal({
+                  isOpen: true,
+                  type: 'error',
+                  title: 'Error de PayPal',
+                  message: 'Hubo un problema con la pasarela de PayPal. Intenta de nuevo o elige otro método.'
+                })}
+              />
             </section>
           )}
 
           <div className={styles.actions} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button 
-              className={styles.confirmBtn} 
-              disabled={!method || isProcessing}
-              onClick={handleConfirm}
-            >
-              {isProcessing ? <Loader2 className="spin" /> : (
-                method === 'sinpe' ? 'Subir Comprobante y Finalizar' : 'Confirmar Pedido'
-              )}
-            </button>
+            {method !== 'paypal' && (
+              <button 
+                className={styles.confirmBtn} 
+                disabled={!method || isProcessing}
+                onClick={handleConfirm}
+              >
+                {isProcessing ? <Loader2 className="spin" /> : (
+                  method === 'sinpe' ? 'Subir Comprobante y Finalizar' : 'Confirmar Pedido'
+                )}
+              </button>
+            )}
             {!isProcessing && (
               <button 
                 type="button"

@@ -1,16 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCategories, addCategory, updateCategory, deleteCategory, Category } from '@/lib/services/categories';
+import { getCategories, addCategory, updateCategory, deleteCategory, Category, checkCategoryProducts } from '@/lib/services/categories';
 import { Plus, Trash2, Edit2, Save, X, Image as ImageIcon, CheckCircle, Loader2, ArrowLeft, Star } from 'lucide-react';
 import Link from 'next/link';
-import StatusModal from '@/components/common/StatusModal';
+import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import styles from '../admin.module.css';
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [reassigning, setReassigning] = useState<{ id: string, name: string } | null>(null);
+  const [reassignTo, setReassignTo] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     tagline: '',
@@ -20,12 +22,17 @@ export default function AdminCategoriesPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [modal, setModal] = useState({ 
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
     isOpen: false, 
-    type: 'success' as any, 
+    type: 'success', 
     title: '', 
-    message: '',
-    onConfirm: undefined as (() => void) | undefined
+    message: '' 
   });
 
   const fetchCats = async () => {
@@ -94,6 +101,42 @@ export default function AdminCategoriesPage() {
     }
   };
 
+  const handleSeedElite = async () => {
+    setSaving(true);
+    try {
+      const eliteCats = [
+        { name: 'Edición Limitada', tagline: 'Piezas Únicas', displayTitle: 'Exclusive Edition', isPremium: true },
+        { name: 'Calzado de Autor', tagline: 'Diseño Superior', displayTitle: 'Designer Footwear', isPremium: true },
+        { name: 'Marroquinería', tagline: 'Piel Fina', displayTitle: 'Luxury Leather', isPremium: false },
+        { name: 'Cuidado Personal', tagline: 'Imperial Grooming', displayTitle: 'Elite Personal Care', isPremium: false },
+        { name: 'Audio Hi-Fi', tagline: 'Sonic Excellence', displayTitle: 'High-Fidelity Audio', isPremium: true },
+        { name: 'Joyería Fina', tagline: 'Signature Gems', displayTitle: 'Gems & Watches', isPremium: false },
+        { name: 'Gourmet Reserva', tagline: 'Sabores del Mundo', displayTitle: 'Reserve Experience', isPremium: false },
+        { name: 'Mobiliario Art', tagline: 'Curated Decor', displayTitle: 'Signature Living', isPremium: true }
+      ];
+
+      for (const cat of eliteCats) {
+        // Simple check to avoid duplicates by name
+        if (!categories.find(c => c.name.toLowerCase() === cat.name.toLowerCase())) {
+          await addCategory(cat.name, cat);
+        }
+      }
+
+      fetchCats();
+      setModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Expansión Completada',
+        message: 'Se han integrado las nuevas colecciones Elite a tu catálogo.'
+      });
+    } catch (error) {
+      console.error(error);
+      setModal({ isOpen: true, type: 'error', title: 'Error', message: 'Hubo un problema al expandir las colecciones.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDelete = (cat: Category) => {
     setModal({
       isOpen: true,
@@ -102,9 +145,14 @@ export default function AdminCategoriesPage() {
       message: `¿Estás seguro de eliminar "${cat.name}"? Esta acción no se puede deshacer.`,
       onConfirm: async () => {
         try {
-          await deleteCategory(cat.id, cat.name);
-          fetchCats();
-          setModal({ isOpen: true, type: 'success', title: 'Eliminado', message: 'Categoría eliminada de la base Elite.' });
+          const result = await deleteCategory(cat.id, cat.name);
+          if (!result.success && result.requiresReassignment) {
+            setReassigning({ id: cat.id, name: cat.name });
+            setReassignTo(categories.find(c => c.id !== cat.id)?.name || '');
+          } else {
+            fetchCats();
+            setModal({ isOpen: true, type: 'success', title: 'Eliminado', message: 'Categoría eliminada de la base Elite.' });
+          }
         } catch (error: any) {
           setModal({ isOpen: true, type: 'error', title: 'Error', message: error.message });
         }
@@ -112,23 +160,47 @@ export default function AdminCategoriesPage() {
     });
   };
 
+  const handleApplyReassignment = async () => {
+    if (!reassigning || !reassignTo) return;
+    setSaving(true);
+    try {
+      await deleteCategory(reassigning.id, reassigning.name, reassignTo);
+      setReassigning(null);
+      setReassignTo('');
+      fetchCats();
+      setModal({ isOpen: true, type: 'success', title: 'Migración Exitosa', message: `Los productos han sido movidos a "${reassignTo}" y la categoría ha sido eliminada.` });
+    } catch (error: any) {
+      setModal({ isOpen: true, type: 'error', title: 'Error en Migración', message: error.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className={`${styles.adminPage} container animate`}>
-      <header className={styles.header}>
+      <header className={styles.header} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <Link href="/admin" className={styles.viewBtn}>
             <ArrowLeft size={18} />
           </Link>
-          <h1>Gestión de <span className={styles.accent}>Categorías</span></h1>
+          <h1 style={{ margin: 0 }}>Gestión de <span className={styles.accent}>Categorías</span></h1>
         </div>
-        <button className={styles.approveBtn} onClick={resetForm}>
-          <Plus size={18} /> Nueva Colección
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button 
+            className={styles.viewBtn} 
+            onClick={handleSeedElite}
+            disabled={saving}
+            style={{ height: '44px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            title="Añadir automáticamente categorías de lujo sugeridas"
+          >
+            <Star size={16} color="var(--brand-accent)" /> Poblar Elite
+          </button>
+        </div>
       </header>
 
-      <div className={styles.tableContainer} style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '32px', padding: '32px', background: 'transparent', border: 'none' }}>
+      <div className={styles.tableContainer} style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', padding: '0', background: 'transparent', border: 'none', marginTop: '32px', alignItems: 'start' }}>
         {/* List */}
-        <div className={styles.tableContainer} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+        <div className={styles.tableContainer} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', margin: 0 }}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -177,7 +249,7 @@ export default function AdminCategoriesPage() {
         </div>
 
         {/* Form */}
-        <div className={styles.tableContainer} style={{ padding: '32px', position: 'sticky', top: '20px', height: 'fit-content' }}>
+        <div className={styles.tableContainer} style={{ padding: '32px', position: 'sticky', top: '20px', height: 'fit-content', margin: 0 }}>
           <h3 style={{ marginBottom: '24px', fontSize: '1.1rem' }}>
             {isEditing ? 'Editar Colección' : 'Crear Nueva Colección'}
           </h3>
@@ -261,26 +333,24 @@ export default function AdminCategoriesPage() {
               >
                 {saving ? <Loader2 className="spin" size={18} /> : isEditing ? 'Actualizar' : 'Crear'}
               </button>
-              {isEditing && (
-                <button 
-                  type="button" 
-                  className={styles.clearBtn} 
-                  onClick={resetForm}
-                  style={{ 
-                    flex: '0.4', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'transparent',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-tertiary)',
-                    borderRadius: '0',
-                    fontSize: '0.9rem'
-                  }}
-                >
-                  Cancelar
-                </button>
-              )}
+              <button 
+                type="button" 
+                className={styles.clearBtn} 
+                onClick={resetForm}
+                style={{ 
+                  flex: '0.6', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  background: 'transparent',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-tertiary)',
+                  borderRadius: '0',
+                  fontSize: '0.9rem'
+                }}
+              >
+                {isEditing ? 'Cancelar' : 'Limpiar'}
+              </button>
             </div>
           </form>
         </div>
@@ -294,6 +364,54 @@ export default function AdminCategoriesPage() {
         onClose={() => setModal({ ...modal, isOpen: false })}
         onConfirm={modal.onConfirm}
       />
+
+      {/* Reassign Modal Overlay */}
+      {reassigning && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className={styles.tableContainer} style={{ width: '100%', maxWidth: '450px', padding: '40px', textAlign: 'center' }}>
+            <div style={{ background: 'rgba(197, 160, 89, 0.1)', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <Star size={32} color="var(--brand-accent)" />
+            </div>
+            <h2 style={{ fontSize: '1.4rem', marginBottom: '16px' }}>Reasignar Productos</h2>
+            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '24px' }}>
+              La categoría <b style={{ color: 'var(--text-primary)' }}>"{reassigning.name}"</b> tiene productos activos. 
+              Selecciona una colección de destino para moverlos antes de eliminarla:
+            </p>
+            
+            <div className={styles.filterGroup} style={{ textAlign: 'left', marginBottom: '32px' }}>
+              <label>Colección de Destino</label>
+              <select 
+                className={styles.filterInput}
+                value={reassignTo}
+                onChange={e => setReassignTo(e.target.value)}
+                style={{ width: '100%', cursor: 'pointer' }}
+              >
+                {categories.filter(c => c.id !== reassigning.id).map(c => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={handleApplyReassignment}
+                className={styles.approveBtn}
+                style={{ flex: 2 }}
+                disabled={saving || !reassignTo}
+              >
+                {saving ? <Loader2 className="spin" size={18} /> : 'Confirmar Migración'}
+              </button>
+              <button 
+                onClick={() => setReassigning(null)}
+                className={styles.clearBtn}
+                style={{ flex: 1, background: 'transparent', border: '1px solid var(--border)', borderRadius: 0 }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

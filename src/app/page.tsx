@@ -1,6 +1,7 @@
 import { ShoppingBag, Star, ShieldCheck, Zap, ArrowRight, ImageIcon } from "lucide-react";
 import { getProducts } from "@/lib/services/products";
 import { getCategories } from "@/lib/services/categories";
+import { getSiteSettings } from "@/lib/services/settings";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -16,6 +17,14 @@ export default async function Home() {
   const premiumCategories = categories
     .filter(c => c.isPremium)
     .slice(0, 3); // Limit to top 3 for the lookbook
+ 
+  // Fetch site settings for dynamic Hero
+  const settings = await getSiteSettings();
+
+  // Highlight logic for the title (last word)
+  const titleParts = settings.heroTitle.split(' ');
+  const mainTitle = titleParts.slice(0, -1).join(' ');
+  const highlightedWord = titleParts[titleParts.length - 1];
 
   return (
     <div className={styles.page}>
@@ -25,8 +34,8 @@ export default async function Home() {
         <section className={styles.hero}>
           <div className={styles.heroBackground}>
             <img 
-              src="/images/home/hero_elite.png" 
-              alt="Elite Luxury" 
+              src={settings.heroBackgroundImageUrl} 
+              alt="Elite Luxury Background" 
               className={styles.heroImage}
             />
             <div className={styles.heroOverlay}></div>
@@ -35,12 +44,12 @@ export default async function Home() {
           <div className="container" style={{ position: 'relative', zIndex: 10 }}>
             <div className={styles.heroContent}>
               <div className="animate">
-                <span className={styles.badge}>Nueva Temporada 2026</span>
+                <span className={styles.badge}>{settings.heroBadge}</span>
                 <h1 className={styles.heroTitle}>
-                  La Definición de <span className={styles.textHighlight}>Excelencia</span>
+                  {mainTitle} <span className={styles.textHighlight}>{highlightedWord}</span>
                 </h1>
                 <p className={styles.heroDesc}>
-                  Curaduría exclusiva de piezas tecnológicas y de autor diseñadas para quienes no aceptan menos que lo extraordinario.
+                  {settings.heroDescription}
                 </p>
                 <div className={styles.heroActions}>
                   <Link href="/catalog" className={styles.btnPrimary}>
@@ -54,7 +63,7 @@ export default async function Home() {
 
               <div className={`${styles.heroVisual} animate`} style={{ animationDelay: '0.4s' }}>
                 <img 
-                  src="/images/home/hero_highlight.png" 
+                  src={settings.heroHighlightImageUrl} 
                   alt="Elite Technology Highlight" 
                 />
               </div>
@@ -145,7 +154,19 @@ export default async function Home() {
                         />
                       </div>
                       <div style={{ padding: '24px' }}>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--brand-accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{product.category}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--brand-accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{product.category}</span>
+                          {product.merchantId && product.merchantId !== 'go-shopping-main' && (
+                            <span style={{ 
+                              fontSize: '0.55rem', 
+                              color: '#8b5cf6', 
+                              border: '1px solid #8b5cf633', 
+                              padding: '2px 6px',
+                              fontWeight: 700,
+                              letterSpacing: '0.05em'
+                            }}>SOCIO ELITE</span>
+                          )}
+                        </div>
                         <h3 style={{ margin: '8px 0', fontSize: '1.2rem' }}>{product.name}</h3>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
                           <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>₡{product.price.toLocaleString()}</span>

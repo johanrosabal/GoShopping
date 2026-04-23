@@ -6,7 +6,8 @@ import {
   doc, 
   getDoc, 
   orderBy, 
-  limit 
+  limit,
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -28,8 +29,11 @@ export interface Product {
   salePrice: number;
   saleStartsAt: string;
   saleExpiresAt: string;
+  discountType?: 'amount' | 'percent';
+  discountPercent?: string;
   rating: number;
   isActive: boolean;
+  merchantId?: string; // Relation to the merchants collection. null or 'go-shopping-main' for system products
   createdAt: any;
   updatedAt?: any;
 }
@@ -52,6 +56,21 @@ export const getProducts = async () => {
   }
 };
 
+export const subscribeToAllProducts = (callback: (products: Product[]) => void) => {
+  const productsRef = collection(db, PRODUCTS_COLLECTION);
+  const q = query(productsRef, orderBy('createdAt', 'desc'));
+  
+  return onSnapshot(q, (snapshot) => {
+    const products = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Product[];
+    callback(products);
+  }, (error) => {
+    console.error("Error subscribing to products:", error);
+  });
+};
+
 export const getProductsByCategory = async (category: string) => {
   try {
     const productsRef = collection(db, PRODUCTS_COLLECTION);
@@ -72,6 +91,26 @@ export const getProductsByCategory = async (category: string) => {
   }
 };
 
+export const getProductsByMerchant = async (merchantId: string) => {
+  try {
+    const productsRef = collection(db, PRODUCTS_COLLECTION);
+    const q = query(
+      productsRef, 
+      where('merchantId', '==', merchantId),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Product[];
+  } catch (error) {
+    console.error(`Error fetching products for merchant ${merchantId}:`, error);
+    return [];
+  }
+};
+
 export const getProductById = async (id: string) => {
   try {
     const docRef = doc(db, PRODUCTS_COLLECTION, id);
@@ -85,6 +124,20 @@ export const getProductById = async (id: string) => {
     console.error("Error fetching product by id:", error);
     return null;
   }
+};
+
+export const subscribeToProduct = (id: string, callback: (product: Product | null) => void) => {
+  const docRef = doc(db, PRODUCTS_COLLECTION, id);
+  
+  return onSnapshot(docRef, (docSnap) => {
+    if (docSnap.exists()) {
+      callback({ id: docSnap.id, ...docSnap.data() } as Product);
+    } else {
+      callback(null);
+    }
+  }, (error) => {
+    console.error(`Error subscribing to product ${id}:`, error);
+  });
 };
 
 export const addProduct = async (
@@ -135,6 +188,7 @@ export const addProduct = async (
       saleExpiresAt: productData.saleExpiresAt || '',
       rating: productData.rating || 5.0,
       isActive: true,
+      merchantId: productData.merchantId || 'go-shopping-main',
       createdAt: serverTimestamp(),
     });
 

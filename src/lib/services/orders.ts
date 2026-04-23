@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDoc, doc, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { CartItem } from '@/context/CartContext';
@@ -16,6 +16,12 @@ export interface OrderData {
   paymentMethod: 'paypal' | 'sinpe';
   status: 'pending' | 'completed' | 'failed';
   sinpeVoucherUrl?: string;
+  transactionId?: string;
+  payerEmail?: string;
+  notes?: string;
+  merchantId?: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 const ORDERS_COLLECTION = 'orders';
@@ -28,6 +34,7 @@ export const createOrder = async (orderData: OrderData, voucherFile?: File) => {
     let finalOrderData = {
       ...orderData,
       orderNumber,
+      merchantId: orderData.merchantId || 'go-shopping-main',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -79,12 +86,103 @@ export const getAllOrders = async () => {
     
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
-    }));
+      ...doc.data() as any
+    } as OrderData & { id: string }));
   } catch (error) {
     console.error("Error fetching all orders:", error);
     return [];
   }
+};
+
+export const getOrdersByMerchant = async (merchantId: string) => {
+  try {
+    const ordersRef = collection(db, ORDERS_COLLECTION);
+    const q = query(
+      ordersRef, 
+      where('merchantId', '==', merchantId),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data() as any
+    })) as (OrderData & { id: string })[];
+  } catch (error) {
+    console.error(`Error fetching orders for merchant ${merchantId}:`, error);
+    return [];
+  }
+};
+
+const getDocs = async (q: any) => {
+  const { getDocs: firestoreGetDocs } = await import('firebase/firestore');
+  return await firestoreGetDocs(q);
+};
+
+export const getUserOrders = async (userId: string) => {
+  try {
+    const { getDocs, query, where, orderBy } = await import('firebase/firestore');
+    const ordersRef = collection(db, ORDERS_COLLECTION);
+    const q = query(
+      ordersRef, 
+      where('userId', '==', userId), 
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data() as any
+    } as OrderData & { id: string }));
+  } catch (error) {
+    console.error("Error fetching user orders:", error);
+    return [];
+  }
+};
+
+export const subscribeToUserOrders = (userId: string, callback: (orders: (OrderData & { id: string })[]) => void) => {
+  const ordersRef = collection(db, ORDERS_COLLECTION);
+  const q = query(ordersRef, where('userId', '==', userId));
+  
+  return onSnapshot(q, (snapshot) => {
+    const orders = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data() as any
+    } as OrderData & { id: string }));
+    
+    // Sort in-memory to avoid index requirements
+    const sortedOrders = orders.sort((a: any, b: any) => {
+      const timeA = a.createdAt?.toMillis?.() || 0;
+      const timeB = b.createdAt?.toMillis?.() || 0;
+      return timeB - timeA;
+    });
+    
+    callback(sortedOrders);
+  }, (error) => {
+    console.error("Error subscribing to user orders:", error);
+  });
+};
+
+export const subscribeToAllOrders = (callback: (orders: (OrderData & { id: string })[]) => void) => {
+  const ordersRef = collection(db, ORDERS_COLLECTION);
+  
+  return onSnapshot(ordersRef, (snapshot) => {
+    const orders = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as OrderData & { id: string }));
+    
+    // Sort in-memory
+    const sortedOrders = orders.sort((a: any, b: any) => {
+      const timeA = a.createdAt?.toMillis?.() || 0;
+      const timeB = b.createdAt?.toMillis?.() || 0;
+      return timeB - timeA;
+    });
+    
+    callback(sortedOrders);
+  }, (error) => {
+    console.error("Error subscribing to all orders:", error);
+  });
 };
 
 export const updateOrderStatus = async (orderId: string, status: string) => {

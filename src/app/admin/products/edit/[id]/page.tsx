@@ -71,7 +71,9 @@ export default function EditProductPage() {
             onSale: productData.onSale || false,
             salePrice: ((productData.salePrice || 0) * 100).toString(),
             saleStartsAt: productData.saleStartsAt || '',
-            saleExpiresAt: productData.saleExpiresAt || ''
+            saleExpiresAt: productData.saleExpiresAt || '',
+            discountType: productData.discountType || 'amount',
+            discountPercent: productData.discountPercent || ''
           });
 
           if (productData.images && productData.images.length > 0) {
@@ -446,21 +448,38 @@ export default function EditProductPage() {
               <h3 style={{ marginBottom: '24px' }}>Galería de Imágenes</h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginBottom: '16px' }}>Puedes añadir hasta 5 fotos. La primera será la imagen de portada.</p>
               <div className={styles.galleryGrid}>
-                {images.map((img, idx) => (
-                  <div key={idx} className={styles.mediaSlot}>
-                    <img src={img.preview} alt="Preview" />
-                    <button type="button" className={styles.removeMedia} onClick={() => removeImage(idx)}>
-                      <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
-                    </button>
-                  </div>
-                ))}
-                {images.length < 5 && (
-                  <label className={styles.mediaSlot}>
-                    <input type="file" hidden accept="image/*" onChange={handleImageAdd} />
-                    <Camera size={24} color="var(--text-tertiary)" />
-                    <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>Cambiar Fotos</span>
-                  </label>
-                )}
+                {/* Render up to 5 slots */}
+                {[...Array(5)].map((_, idx) => {
+                  const img = images[idx];
+                  if (img) {
+                    return (
+                      <div key={idx} className={styles.mediaSlot}>
+                        <img src={img.preview} alt="Preview" />
+                        <button type="button" className={styles.removeMedia} onClick={() => removeImage(idx)}>
+                          <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
+                        </button>
+                      </div>
+                    );
+                  }
+                  
+                  // Empty slot or next upload slot
+                  const isNextUpload = idx === images.length;
+                  return (
+                    <label key={idx} className={`${styles.mediaSlot} ${!isNextUpload ? styles.emptySlot : ''}`}>
+                      {isNextUpload ? (
+                        <>
+                          <input type="file" hidden accept="image/*" onChange={handleImageAdd} />
+                          <Camera size={24} color="var(--brand-accent)" />
+                          <span style={{ fontSize: '0.7rem', marginTop: '8px', fontWeight: 600 }}>Agregar Foto</span>
+                        </>
+                      ) : (
+                        <div style={{ opacity: 0.2 }}>
+                           <Camera size={20} />
+                        </div>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -6,7 +6,7 @@ import { Upload, Plus, Camera, Loader2, ArrowLeft, CheckCircle } from 'lucide-re
 import { addProduct } from '@/lib/services/products';
 import { getCategories } from '@/lib/services/categories';
 import RichTextEditor from '@/components/admin/RichTextEditor';
-import StatusModal from '@/components/common/StatusModal';
+import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import Link from 'next/link';
 import styles from '../../admin.module.css';
 
@@ -17,9 +17,15 @@ export default function NewProductPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [images, setImages] = useState<{file: File, preview: string}[]>([]);
   const [video, setVideo] = useState<{file: File, preview: string} | null>(null);
-  const [modal, setModal] = useState({ 
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
     isOpen: false, 
-    type: 'success' as any, 
+    type: 'success', 
     title: '', 
     message: '' 
   });
@@ -419,21 +425,38 @@ export default function NewProductPage() {
             <div className={styles.orderSection}>
               <h3 style={{ marginBottom: '24px' }}>Galería de Imágenes (Máx 5)</h3>
               <div className={styles.galleryGrid}>
-                {images.map((img, idx) => (
-                  <div key={idx} className={styles.mediaSlot}>
-                    <img src={img.preview} alt="Preview" />
-                    <button type="button" className={styles.removeMedia} onClick={() => removeImage(idx)}>
-                      <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
-                    </button>
-                  </div>
-                ))}
-                {images.length < 5 && (
-                  <label className={styles.mediaSlot}>
-                    <input type="file" hidden accept="image/*" onChange={handleImageAdd} />
-                    <Camera size={24} color="var(--text-tertiary)" />
-                    <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>{images.length}/5 Fotos</span>
-                  </label>
-                )}
+                {/* Render up to 5 slots */}
+                {[...Array(5)].map((_, idx) => {
+                  const img = images[idx];
+                  if (img) {
+                    return (
+                      <div key={idx} className={styles.mediaSlot}>
+                        <img src={img.preview} alt="Preview" />
+                        <button type="button" className={styles.removeMedia} onClick={() => removeImage(idx)}>
+                          <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
+                        </button>
+                      </div>
+                    );
+                  }
+                  
+                  // Empty slot or next upload slot
+                  const isNextUpload = idx === images.length;
+                  return (
+                    <label key={idx} className={`${styles.mediaSlot} ${!isNextUpload ? styles.emptySlot : ''}`}>
+                      {isNextUpload ? (
+                        <>
+                          <input type="file" hidden accept="image/*" onChange={handleImageAdd} />
+                          <Camera size={24} color="var(--brand-accent)" />
+                          <span style={{ fontSize: '0.7rem', marginTop: '8px', fontWeight: 600 }}>Agregar Foto</span>
+                        </>
+                      ) : (
+                        <div style={{ opacity: 0.2 }}>
+                           <Camera size={20} />
+                        </div>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
 
               <h3 style={{ marginTop: '32px', marginBottom: '24px' }}>Video de Muestra (1)</h3>

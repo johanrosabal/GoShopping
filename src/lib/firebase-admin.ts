@@ -1,9 +1,9 @@
 import admin from 'firebase-admin';
 
-const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+const key = process.env.ADMIN_SDK_KEY;
 
 if (!key) {
-  throw new Error('La variable de entorno FIREBASE_SERVICE_ACCOUNT_KEY no está definida. Por favor, revisa tu archivo .env');
+  throw new Error('La variable de entorno ADMIN_SDK_KEY no está definida. Por favor, revisa tu archivo .env');
 }
 
 const serviceAccount = JSON.parse(key);

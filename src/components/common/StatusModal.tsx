@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { CheckCircle, AlertTriangle, XCircle, Info, Loader2 } from 'lucide-react';
 import styles from './StatusModal.module.css';
 
-export type ModalType = 'success' | 'error' | 'warning' | 'confirm' | 'loading';
+export type ModalType = 'success' | 'error' | 'warning' | 'confirm' | 'loading' | 'info';
 
 interface StatusModalProps {
   isOpen: boolean;

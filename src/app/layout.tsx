@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import ConditionalFooter from "@/components/layout/ConditionalFooter";
 import CartDrawer from "@/components/cart/CartDrawer";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className="fade-in">
         <ThemeProvider>
           <AuthProvider>
@@ -31,7 +31,7 @@ export default function RootLayout({
               <main style={{ paddingTop: 'var(--header-height)' }}>
                 {children}
               </main>
-              <Footer />
+              <ConditionalFooter />
             </CartProvider>
           </AuthProvider>
         </ThemeProvider>
