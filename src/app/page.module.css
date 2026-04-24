@@ -225,7 +225,7 @@
 
 /* Featured Products */
 .featured {
-  padding: 80px 0;
+  padding: 40px 0;
   background: rgba(255, 255, 255, 0.01);
 }
 
@@ -240,12 +240,12 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 40px;
-  padding: 60px 0;
+  padding: 10px 0;
 }
 
 .featureItem {
   text-align: center;
-  padding: 40px;
+  padding: 30px 20px;
   background: rgba(255,255,255,0.02);
   border: 1px solid var(--border);
   transition: all 0.3s;

@@ -24,6 +24,7 @@ export interface MerchantProfile {
   ownerUid: string;
   status: 'active' | 'suspended' | 'pending';
   subscriptionType: string;
+  timezone?: string; // America/Costa_Rica, etc.
   promotedBy?: string; // UID del Agente Promotor
   createdAt: any;
   updatedAt: any;
@@ -67,6 +68,14 @@ export interface MerchantProfile {
     whatsapp?: string;
     instagram?: string;
     facebook?: string;
+  };
+  
+  // socialConfig for visibility switches
+  socialConfig?: {
+    showWhatsapp: boolean;
+    showInstagram: boolean;
+    showFacebook: boolean;
+    showPhone: boolean;
   };
 }
 
@@ -160,6 +169,21 @@ export const getMerchantById = async (id: string) => {
   }
 };
 
+export const getMerchantByOwnerUid = async (uid: string) => {
+  try {
+    const merchantsRef = collection(db, MERCHANTS_COLLECTION);
+    const q = query(merchantsRef, where('ownerUid', '==', uid));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return snap.docs[0].data() as MerchantProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching merchant by owner UID:", error);
+    return null;
+  }
+};
+
 export const getAllMerchants = async () => {
   try {
     const merchantsRef = collection(db, MERCHANTS_COLLECTION);
@@ -184,3 +208,25 @@ export const updateMerchant = async (id: string, data: Partial<MerchantProfile>)
     return false;
   }
 };
+export async function deleteMerchant(id: string): Promise<boolean> {
+  try {
+    const merchantDoc = await getDoc(doc(db, 'merchants', id));
+    if (merchantDoc.exists()) {
+      const data = merchantDoc.data();
+      const ownerUid = data.ownerUid;
+
+      // 1. Borrar el comercio
+      await deleteDoc(doc(db, 'merchants', id));
+
+      // 2. Si hay un ownerUid, podríamos borrar su perfil en Firestore 
+      // (Opcional: solo si es un shadow user o queremos limpieza total)
+      if (ownerUid) {
+        await deleteDoc(doc(db, 'users', ownerUid));
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error('Error deleting merchant:', error);
+    return false;
+  }
+}

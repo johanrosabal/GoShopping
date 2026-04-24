@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   AlertTriangle
 } from 'lucide-react';
-import { PayPalButtons } from "@paypal/react-paypal-js";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 interface AffiliationPaymentModalProps {
   isOpen: boolean;
@@ -115,25 +115,27 @@ export default function AffiliationPaymentModal({ isOpen, onClose, onPaymentSucc
           ) : method === 'paypal' ? (
              <div>
                 <div style={{ marginBottom: '24px' }}>
-                  <PayPalButtons 
-                    style={{ layout: "vertical", shape: "rect", label: "pay" }}
-                    createOrder={(data, actions) => {
-                      return actions.order.create({
-                        intent: 'CAPTURE',
-                        purchase_units: [{
-                          amount: {
-                            currency_code: 'USD',
-                            value: plan.price.toString()
-                          },
-                          description: `Afiliación Go-Shopping: Plan ${plan.name}`
-                        }]
-                      });
-                    }}
-                    onApprove={async (data, actions) => {
-                       const details = await actions.order?.capture();
-                       onPaymentSuccess({ method: 'paypal', details });
-                    }}
-                  />
+                  <PayPalScriptProvider options={{ "clientId": "test" }}>
+                    <PayPalButtons 
+                      style={{ layout: "vertical", shape: "rect", label: "pay" }}
+                      createOrder={(data, actions) => {
+                        return actions.order.create({
+                          intent: 'CAPTURE',
+                          purchase_units: [{
+                            amount: {
+                              currency_code: 'USD',
+                              value: plan.price.toString()
+                            },
+                            description: `Afiliación Go-Shopping: Plan ${plan.name}`
+                          }]
+                        });
+                      }}
+                      onApprove={async (data, actions) => {
+                        const details = await actions.order?.capture();
+                        onPaymentSuccess({ method: 'paypal', details });
+                      }}
+                    />
+                  </PayPalScriptProvider>
                 </div>
                 <button 
                   onClick={() => setMethod(null)}

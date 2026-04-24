@@ -2,6 +2,7 @@ import { ShoppingBag, Star, ShieldCheck, Zap, ArrowRight, ImageIcon } from "luci
 import { getProducts } from "@/lib/services/products";
 import { getCategories } from "@/lib/services/categories";
 import { getSiteSettings } from "@/lib/services/settings";
+import ProductCard from "@/components/catalog/ProductCard";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -10,7 +11,12 @@ export default async function Home() {
   const allProducts = await getProducts();
   const featuredProducts = allProducts
     .filter(p => p.featured && p.isActive !== false)
-    .slice(0, 4);
+    .slice(0, 4)
+    .map(p => ({
+      ...p,
+      createdAt: p.createdAt?.seconds ? { seconds: p.createdAt.seconds, nanoseconds: p.createdAt.nanoseconds } : null,
+      updatedAt: p.updatedAt?.seconds ? { seconds: p.updatedAt.seconds, nanoseconds: p.updatedAt.nanoseconds } : null,
+    }));
 
   // Fetch premium categories
   const categories = await getCategories();
@@ -71,32 +77,6 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Brand Features Section (Trust Bar) */}
-        <section className="container">
-          <div className={styles.features}>
-            <div className={styles.featureItem}>
-              <div className={styles.featureIcon}>
-                <Zap size={40} />
-              </div>
-              <h3>Entrega Inmediata</h3>
-              <p>Logística de vanguardia garantizando envíos el mismo día dentro del Gran Área Metropolitana.</p>
-            </div>
-            <div className={styles.featureItem}>
-              <div className={styles.featureIcon}>
-                <ShieldCheck size={40} />
-              </div>
-              <h3>Garantía de Autenticidad</h3>
-              <p>Cada pieza es sometida a un riguroso proceso de verificación por especialistas antes de su entrega.</p>
-            </div>
-            <div className={styles.featureItem}>
-              <div className={styles.featureIcon}>
-                <Star size={40} />
-              </div>
-              <h3>Soporte Executive</h3>
-              <p>Atención personalizada multicanal para una experiencia de post-venta al nivel de su inversión.</p>
-            </div>
-          </div>
-        </section>
 
         {/* Featured Categories Lookbook */}
         {premiumCategories.length > 0 && (
@@ -144,42 +124,39 @@ export default async function Home() {
 
               <div className={styles.productGrid}>
                 {featuredProducts.map(product => (
-                  <Link key={product.id} href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', overflow: 'hidden', transition: 'all 0.3s' }} className="animate hover-up">
-                      <div style={{ height: '300px', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      </div>
-                      <div style={{ padding: '24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--brand-accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{product.category}</span>
-                          {product.merchantId && product.merchantId !== 'go-shopping-main' && (
-                            <span style={{ 
-                              fontSize: '0.55rem', 
-                              color: '#8b5cf6', 
-                              border: '1px solid #8b5cf633', 
-                              padding: '2px 6px',
-                              fontWeight: 700,
-                              letterSpacing: '0.05em'
-                            }}>SOCIO ELITE</span>
-                          )}
-                        </div>
-                        <h3 style={{ margin: '8px 0', fontSize: '1.2rem' }}>{product.name}</h3>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>₡{product.price.toLocaleString()}</span>
-                          <ShoppingBag size={18} color="var(--brand-accent)" />
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             </div>
           </section>
         )}
+
+        {/* Brand Features Section (Trust Bar) */}
+        <section className="container">
+          <div className={styles.features}>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <Zap size={40} />
+              </div>
+              <h3>Entrega Inmediata</h3>
+              <p>Logística de vanguardia garantizando envíos el mismo día dentro del Gran Área Metropolitana.</p>
+            </div>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <ShieldCheck size={40} />
+              </div>
+              <h3>Garantía de Autenticidad</h3>
+              <p>Cada pieza es sometida a un riguroso proceso de verificación por especialistas antes de su entrega.</p>
+            </div>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <Star size={40} />
+              </div>
+              <h3>Soporte Executive</h3>
+              <p>Atención personalizada multicanal para una experiencia de post-venta al nivel de su inversión.</p>
+            </div>
+          </div>
+        </section>
 
       </main>
     </div>

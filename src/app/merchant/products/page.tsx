@@ -17,15 +17,23 @@ import {
   Tag
 } from 'lucide-react';
 import Link from 'next/link';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
+import { getMerchantByOwnerUid } from '@/lib/services/merchants';
+import { getCategories } from '@/lib/services/categories';
 import styles from '../../admin/admin.module.css';
 import StatusModal, { ModalType } from '@/components/common/StatusModal';
 
 export default function MerchantProductsPage() {
-  const { userData } = useAuth();
+  const { userData, loading: loadingAuth } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [modal, setModal] = useState<{
     isOpen: boolean;
     type: ModalType;
@@ -34,22 +42,74 @@ export default function MerchantProductsPage() {
     onConfirm?: () => void;
   }>({ isOpen: false, type: 'info', title: '', message: '' });
 
-  const fetchProducts = async () => {
-    if (!userData?.merchantId) return;
-    setLoading(true);
-    const data = await getProductsByMerchant(userData.merchantId);
-    setProducts(data);
-    setLoading(false);
-  };
+  useEffect(() => {
+    const fetchProducts = async () => {
+      let effectiveMerchantId = userData?.merchantId;
+
+      if (!effectiveMerchantId && userData?.uid) {
+        try {
+          const merchant = await getMerchantByOwnerUid(userData.uid);
+          if (merchant) effectiveMerchantId = merchant.id;
+        } catch (e) {
+          console.error("Error recovering merchantId:", e);
+        }
+      }
+
+      if (!effectiveMerchantId) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const q = query(
+          collection(db, 'products'),
+          where('merchantId', '==', effectiveMerchantId),
+          orderBy('createdAt', 'desc')
+        );
+        
+        const snap = await getDocs(q);
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
+        setProducts(list);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!loadingAuth) {
+      fetchProducts();
+    }
+  }, [userData, loadingAuth]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [userData]);
+    let filtered = products.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           p.category.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+      
+      let matchesStock = true;
+      if (stockFilter === 'in_stock') matchesStock = p.stock > 0;
+      if (stockFilter === 'low_stock') matchesStock = p.stock > 0 && p.stock <= 5;
+      if (stockFilter === 'out_of_stock') matchesStock = p.stock === 0;
+
+      return matchesSearch && matchesCategory && matchesStock;
+    });
+    setFilteredProducts(filtered);
+  }, [searchTerm, categoryFilter, stockFilter, products]);
+
+  useEffect(() => {
+    const fetchCats = async () => {
+      const data = await getCategories();
+      setCategories(data.map(c => c.name));
+    };
+    fetchCats();
+  }, []);
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     const success = await updateProductStatus(id, !currentStatus);
     if (success) {
-      fetchProducts();
+      window.location.reload();
     }
   };
 
@@ -63,53 +123,74 @@ export default function MerchantProductsPage() {
         const success = await deleteProduct(id);
         if (success) {
           setModal({ isOpen: true, type: 'success', title: 'Eliminado', message: 'El producto ha sido removido de tu catálogo.' });
-          fetchProducts();
+          window.location.reload();
         }
       }
     });
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className={`${styles.adminPage} container animate`}>
-      <header className={styles.header}>
+      <header className={styles.header} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <Link href="/merchant/dashboard" className={styles.viewBtn}>
             <ArrowLeft size={18} />
           </Link>
-          <h1>Tu <span style={{ color: '#8b5cf6' }}>Inventario</span></h1>
+          <h1>Tu <span className={styles.accent}>Inventario</span></h1>
         </div>
-        <Link href="/merchant/products/new" className={styles.approveBtn} style={{ background: '#8b5cf6' }}>
-          <Plus size={18} /> Nuevo Producto
+        <Link href="/merchant/products/new" className={styles.approveBtn}>
+          <Plus size={18} /> NUEVO PRODUCTO
         </Link>
       </header>
 
       {/* Filter Bar */}
       <div className={styles.filterBar}>
         <div className={styles.filterGroup}>
-          <label>Buscar en mi catálogo</label>
+          <label>BUSCAR PRODUCTO</label>
           <div style={{ position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
+            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
             <input 
               type="text" 
+              placeholder="Nombre o categoría..." 
               className={styles.filterInput}
               style={{ paddingLeft: '40px', width: '100%' }}
-              placeholder="Nombre de producto o categoría..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <label>CATEGORÍA</label>
+          <select 
+            className={styles.filterSelect}
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
+            <option value="all">Todas las Categorías</option>
+            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <label>ESTADO DE STOCK</label>
+          <select 
+            className={styles.filterSelect}
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+          >
+            <option value="all">Todos los Estados</option>
+            <option value="in_stock">En Stock</option>
+            <option value="low_stock">Stock Bajo (≤ 5)</option>
+            <option value="out_of_stock">Agotado</option>
+          </select>
         </div>
       </div>
 
       <div className={styles.tableContainer}>
         {loading ? (
           <div style={{ padding: '100px', textAlign: 'center' }}>
-            <Loader2 className="spin" size={40} color="#8b5cf6" />
+            <Loader2 className="spin" size={40} color="var(--brand-accent)" />
           </div>
         ) : (
           <table className={styles.table}>
@@ -134,7 +215,11 @@ export default function MerchantProductsPage() {
                           alt={p.name} 
                           style={{ width: '40px', height: '40px', objectFit: 'cover', background: 'var(--bg-tertiary)' }} 
                         />
-                        <div style={{ fontWeight: 600 }}>{p.name}</div>
+                        <div style={{ fontWeight: 600 }}>
+                          <Link href={`/merchant/products/edit/${p.id}`} className={styles.productLink}>
+                            {p.name}
+                          </Link>
+                        </div>
                       </div>
                     </td>
                     <td>

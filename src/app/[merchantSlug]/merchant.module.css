@@ -1,0 +1,566 @@
+.main {
+  background: var(--bg-primary);
+  min-height: 100vh;
+}
+
+/* Splash Screen Elite */
+.splashContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #050505;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.splashContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+}
+
+.splashBrand {
+  font-family: 'Outfit', sans-serif;
+  font-size: 3rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.accent {
+  color: var(--brand-accent);
+}
+
+.splashDivider {
+  width: 60px;
+  height: 1px;
+  background: var(--brand-accent);
+  opacity: 0.6;
+}
+
+.splashMerchantName {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: #fff;
+  letter-spacing: 0.5em;
+  margin: 0;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.splashStatus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Elite Merchant Hero */
+.hero {
+  position: relative;
+  min-height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #000;
+  padding: 80px 0 20px;
+}
+
+.heroBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.heroBackgroundImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+  filter: brightness(0.8);
+}
+
+.heroOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.95) 100%);
+  z-index: 2;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1200px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.bannerPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, #0a0a0a, #1a1a1a);
+}
+
+.logoWrapper {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin: 0 auto 16px auto;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.logo {
+  border-radius: 50%;
+  border: 4px solid #000;
+  background: var(--bg-secondary);
+  object-fit: cover;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  width: 100%;
+  height: 100%;
+}
+
+.logoPlaceholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 4px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-accent);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+.statusBadge {
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.1em;
+  border: 2px solid #000;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  z-index: 25;
+  margin-bottom: 24px;
+  display: inline-block;
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.merchantHeader h1 {
+  font-size: 4rem;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  margin: 0;
+  color: #fff;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+.locationSummary {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--brand-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  margin-top: 12px;
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+.heroManifesto {
+  margin-top: 50px;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+}
+
+.heroDescription {
+  font-size: 1.15rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  font-weight: 400;
+  max-width: 600px;
+}
+
+.heroActions {
+  display: flex;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+/* Sub Navigation */
+.subPageNav {
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: var(--header-height);
+  z-index: 100;
+  padding: 10px 0;
+}
+
+.navContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+}
+
+.navLink {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  transition: all 0.3s;
+  padding: 10px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.navLink:hover, .navLinkActive {
+  color: var(--brand-accent);
+  border-bottom-color: var(--brand-accent);
+}
+
+/* Content Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 24px 0px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* Trust Section (Features) */
+.trustSection {
+  background: #000;
+  padding: 60px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+.featureItem {
+  text-align: center;
+  padding: 40px 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.featureItem:hover {
+  transform: translateY(-5px);
+  border-color: var(--brand-accent);
+  background: rgba(212, 175, 55, 0.02);
+}
+
+.featureIcon {
+  width: 64px;
+  height: 64px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: var(--brand-accent);
+}
+
+.featureItem h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.featureItem p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .features {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Sections */
+.sectionHeader {
+  margin-bottom: 20px;
+}
+
+.sectionBadge {
+  display: inline-block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: var(--brand-accent);
+  margin-bottom: 12px;
+  font-weight: 800;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Buttons */
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px;
+  border-radius: 4px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+}
+
+.btnWhatsapp {
+  background: var(--brand-accent);
+  color: #000;
+  border: none;
+}
+
+.btnWhatsapp:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(197, 160, 89, 0.3);
+}
+
+.btnShare {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.btnShare:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Product Grid */
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 32px;
+}
+
+.productCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.3s;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+}
+
+.productCard:hover {
+  transform: translateY(-10px);
+  border-color: var(--brand-accent);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.productImageWrapper {
+  position: relative;
+  height: 300px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.productImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.productCard:hover .productImage {
+  transform: scale(1.05);
+}
+
+.imagePlaceholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.1);
+}
+
+.discountBadge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 2px;
+  letter-spacing: 0.1em;
+  z-index: 2;
+}
+
+.productInfo {
+  padding: 24px;
+}
+
+.productCategoryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.productCategory {
+  font-size: 0.7rem;
+  color: var(--brand-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.eliteBadge {
+  font-size: 0.55rem;
+  color: var(--brand-accent);
+  border: 1px solid rgba(197, 160, 89, 0.2);
+  padding: 2px 6px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.productName {
+  margin: 12px 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.price {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.oldPrice {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+  margin-left: 8px;
+  opacity: 0.5;
+}
+
+.productsPlaceholder {
+  text-align: center;
+  padding: 100px 0;
+  background: rgba(255,255,255,0.01);
+  border: 1px dashed var(--border);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    min-height: 550px;
+    padding-top: 60px;
+  }
+  .merchantHeader h1 {
+    font-size: 2.2rem;
+    margin-top: 20px;
+  }
+  .locationSummary {
+    margin-bottom: 20px;
+  }
+  .logoWrapper {
+    width: 180px;
+    height: 180px;
+    margin-bottom: 16px;
+  }
+  .navContainer {
+    gap: 20px;
+  }
+  .navLink {
+    font-size: 0.6rem;
+  }
+}

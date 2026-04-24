@@ -16,9 +16,11 @@ import {
   MoreVertical,
   Mail,
   Phone,
-  Settings
+  Settings,
+  Trash2
 } from 'lucide-react';
 import Link from 'next/link';
+import { deleteMerchant } from '@/lib/services/merchants';
 import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import styles from '../admin.module.css';
 
@@ -73,6 +75,27 @@ export default function AdminMerchantsPage() {
     });
   };
 
+  const handleDelete = (merchant: MerchantProfile) => {
+    setModal({
+      isOpen: true,
+      type: 'confirm',
+      title: 'Eliminar Comercio',
+      message: `¿Estás ABSOLUTAMENTE SEGURO de eliminar "${merchant.name}"? Esta acción es irreversible y borrará todos los datos asociados.`,
+      onConfirm: async () => {
+        const success = await deleteMerchant(merchant.id);
+        if (success) {
+          setModal({
+            isOpen: true,
+            type: 'success',
+            title: 'Eliminado',
+            message: 'El comercio ha sido eliminado del ecosistema.'
+          });
+          fetchMerchants();
+        }
+      }
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active': return <span style={{ color: '#2ecc71', background: 'rgba(46, 204, 113, 0.1)', padding: '4px 8px', fontSize: '0.7rem', fontWeight: 700, borderRadius: '4px' }}>ACTIVO</span>;
@@ -110,6 +133,7 @@ export default function AdminMerchantsPage() {
             <thead>
               <tr>
                 <th>Comercio</th>
+                <th>País / Zona</th>
                 <th>Suscripción</th>
                 <th>Estado</th>
                 <th>Datos de Contacto</th>
@@ -137,6 +161,28 @@ export default function AdminMerchantsPage() {
                         <div style={{ fontWeight: 600 }}>{m.name}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>/{m.slug}</div>
                       </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <select 
+                        value={m.timezone || 'America/Costa_Rica'}
+                        onChange={async (e) => {
+                          const success = await updateMerchant(m.id, { timezone: e.target.value });
+                          if (success) fetchMerchants();
+                        }}
+                        className={styles.filterInput}
+                        style={{ padding: '6px 10px', fontSize: '0.75rem', width: 'auto' }}
+                      >
+                        <option value="America/Costa_Rica">🇨🇷 Costa Rica</option>
+                        <option value="America/Panama">🇵🇦 Panamá</option>
+                        <option value="America/Managua">🇳🇮 Nicaragua</option>
+                        <option value="America/Guatemala">🇬🇹 Guatemala</option>
+                        <option value="America/El_Salvador">🇸🇻 El Salvador</option>
+                        <option value="America/Tegucigalpa">🇭🇳 Honduras</option>
+                        <option value="America/Mexico_City">🇲🇽 México</option>
+                        <option value="America/Bogota">🇨🇴 Colombia</option>
+                      </select>
                     </div>
                   </td>
                   <td>
@@ -176,6 +222,18 @@ export default function AdminMerchantsPage() {
                         title={m.status === 'active' ? 'Suspender' : 'Activar'}
                       >
                          {m.status === 'active' ? <XCircle size={16} /> : <CheckCircle size={16} />}
+                      </button>
+                      <button 
+                        className={styles.viewBtn} 
+                        style={{ 
+                          padding: '8px',
+                          color: '#ff4d4d',
+                          borderColor: 'rgba(255, 77, 77, 0.2)'
+                         }}
+                        onClick={() => handleDelete(m)}
+                        title="Eliminar Comercio"
+                      >
+                         <Trash2 size={16} />
                       </button>
                     </div>
                   </td>

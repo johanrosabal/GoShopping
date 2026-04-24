@@ -1,27 +1,39 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
-import { ShoppingBag, ArrowLeft, Star, ShieldCheck, Zap, Info, Loader2 } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, Star, ShieldCheck, Zap, Info, Loader2, Store } from 'lucide-react';
 import Link from 'next/link';
 import { getProductById, getEffectivePrice, Product, subscribeToProduct } from '@/lib/services/products';
+import { getMerchantById, MerchantProfile } from '@/lib/services/merchants';
 import { useCart } from '@/context/CartContext';
+import { formatCurrency } from '@/lib/utils/currency';
 import AddToListButton from '@/components/catalog/AddToListButton';
 import styles from '../ProductDetail.module.css';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [product, setProduct] = useState<Product | null>(null);
+  const [merchant, setMerchant] = useState<MerchantProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState<string>('');
   const { addToCart } = useCart();
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = subscribeToProduct(id, (data) => {
+    const unsubscribe = subscribeToProduct(id, async (data) => {
       setProduct(data);
       if (data && !activeImage) {
         setActiveImage(data.imageUrl);
       }
+      
+      // Si el producto tiene un merchantId, buscar los detalles del comercio
+      if (data?.merchantId) {
+        const mData = await getMerchantById(data.merchantId);
+        setMerchant(mData);
+      } else {
+        setMerchant(null);
+      }
+      
       setLoading(false);
     });
     return () => unsubscribe();
@@ -103,9 +115,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             <div className={styles.priceContainer}>
-              <span className={styles.currentPrice}>₡{effectivePrice.toLocaleString()}</span>
+              <span className={styles.currentPrice}>₡{formatCurrency(effectivePrice)}</span>
               {hasDiscount && (
-                <span className={styles.originalPrice}>₡{product.price.toLocaleString()}</span>
+                <span className={styles.originalPrice}>₡{formatCurrency(product.price)}</span>
               )}
             </div>
 
@@ -133,6 +145,32 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <label>Garantía</label>
                 <span>12 meses oficial</span>
               </div>
+              
+              {merchant && (
+                <div className={styles.metaItem} style={{ gridColumn: 'span 2', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                  <label style={{ color: 'var(--brand-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Store size={14} /> COMERCIO ELITE
+                  </label>
+                  <Link 
+                    href={`/${merchant.slug}`} 
+                    style={{ 
+                      color: 'white', 
+                      fontWeight: 800, 
+                      textDecoration: 'none',
+                      fontSize: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      marginTop: '4px'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--brand-accent)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'white'}
+                  >
+                    {merchant.name.toUpperCase()}
+                    <ArrowLeft size={14} style={{ transform: 'rotate(180deg)', opacity: 0.5 }} />
+                  </Link>
+                </div>
+              )}
             </div>
 
             <div className={styles.actions}>

@@ -6,8 +6,9 @@
 .header {
   margin-bottom: 48px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .accent {
@@ -319,9 +320,14 @@
   object-fit: cover;
 }
 
+.videoGrid {
+  margin-top: 12px;
+}
+
 .videoSlot {
   grid-column: span 2;
   aspect-ratio: 16/9;
+  width: 100%;
 }
 
 .removeMedia {
@@ -395,17 +401,29 @@
 }
 
 .filterInput, .filterSelect {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  padding: 10px 14px;
-  font-size: 0.9rem;
-  transition: var(--transition);
+  background: #0a0a0a !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff !important;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  outline: none;
 }
 
 .filterInput:focus, .filterSelect:focus {
   border-color: var(--brand-accent);
-  outline: none;
+  background: #111111 !important;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.1);
+}
+
+/* Forzar estilo oscuro en Autofill de navegadores */
+.filterInput:-webkit-autofill,
+.filterInput:-webkit-autofill:hover, 
+.filterInput:-webkit-autofill:focus,
+.filterSelect:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .clearBtn {
@@ -448,4 +466,90 @@
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--text-tertiary);
   color: var(--text-primary);
+}
+
+/* Elite Merchant Settings Styles */
+.logoUploadPreview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px dashed rgba(212, 175, 55, 0.3);
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logoUploadPreview:hover {
+  border-color: var(--brand-accent);
+  background: rgba(212, 175, 55, 0.05);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+}
+
+.logoUploadPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.deleteBtn {
+  background: transparent;
+  border: 1px solid var(--status-error);
+  color: var(--status-error);
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+  background: var(--status-error);
+  color: white;
+}
+
+/* Toggle Switch Styles */
+.switchWrapper {
+  display: flex;
+  align-items: center;
+}
+
+.switchLabel {
+  width: 40px;
+  height: 20px;
+  background: #333;
+  border-radius: 20px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.switchLabel::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #666;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.switchInput {
+  display: none;
+}
+
+.switchInput:checked + .switchLabel {
+  background: var(--brand-accent);
+}
+
+.switchInput:checked + .switchLabel::after {
+  left: calc(100% - 18px);
+  background: white;
 }

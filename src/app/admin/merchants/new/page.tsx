@@ -27,9 +27,13 @@ import {
   Briefcase,
   Hash,
   XCircle,
-  CreditCard
+  CreditCard,
+  Eye,
+  EyeOff,
+  Lock
 } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { collection, doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { createMerchant, getPredictedNextMerchantNumber, updateMerchant } from '@/lib/services/merchants';
 import { getUserByEmail, updateUser } from '@/lib/services/users';
 import { getMarketplacePlans, MarketplacePlan } from '@/lib/services/plans';
@@ -76,6 +80,7 @@ export default function NewMerchantPage() {
   const [loading, setLoading] = useState(false);
   const [predictedNumber, setPredictedNumber] = useState('000000');
   const [activeMerchantId, setActiveMerchantId] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   
   const [modal, setModal] = useState<{
     isOpen: boolean;
@@ -107,8 +112,10 @@ export default function NewMerchantPage() {
     physicalAddress: '',
     mapsUrl: '', 
     country: 'Costa Rica',
-    adminEmail: '',
+    timezone: 'America/Costa_Rica',
     phone: '',
+    adminEmail: '',
+    password: '',
     subscriptionType: '',
     status: 'pending', // Default to pending
     internalNotes: '',
@@ -191,17 +198,42 @@ export default function NewMerchantPage() {
 
     try {
       const agentUid = auth.currentUser?.uid;
-      const user = await getUserByEmail(formData.adminEmail);
+      let user = await getUserByEmail(formData.adminEmail);
+      
+      let ownerUid = user?.uid;
+
+      // Si el usuario no existe, usamos la API para crearlo en Authentication y Firestore
       if (!user) {
-        setModal({ isOpen: true, type: 'error', title: 'Error', message: 'Usuario no encontrado.' });
-        setLoading(false);
-        return;
+        console.log("Usuario nuevo detectado. Registrando en Authentication...");
+        const response = await fetch('/api/admin/create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.adminEmail,
+            password: formData.password,
+            displayName: formData.contactName,
+            role: 'merchant_admin'
+          })
+        });
+
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || 'No se pudo crear la cuenta de autenticación.');
+          }
+          ownerUid = result.uid;
+        } else {
+          const text = await response.text();
+          console.error("API Response non-JSON:", text);
+          throw new Error('El servidor respondió con un error inesperado (no-JSON). Revisa la consola.');
+        }
       }
 
-      // We ALWAYS create the merchant first in 'pending' status
+      // Procedemos a crear el comercio vinculado al UID real
       const merchantId = await createMerchant({
         ...formData,
-        ownerUid: user.uid,
+        ownerUid: ownerUid!,
         status: 'pending',
         paymentConfig: { paypalEmail: '', sinpeNumber: '', sinpeOwner: '' },
         contact: {
@@ -218,22 +250,30 @@ export default function NewMerchantPage() {
           province: formData.province,
           canton: formData.canton,
           district: formData.district,
-          country: formData.country
+          country: formData.country,
+          timezone: formData.timezone
         }
       }, agentUid);
 
       if (merchantId) {
-        await updateUser(user.uid, {
-          role: 'merchant_admin',
-          merchantId: merchantId
+        // Vinculamos el comercio al usuario recién creado/existente
+        await fetch('/api/admin/create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.adminEmail,
+            password: formData.password, // Solo necesario si es nuevo, pero la API lo maneja con merge
+            merchantId: merchantId
+          })
         });
 
         setActiveMerchantId(merchantId);
         setLoading(false);
-        setPaymentModal({ isOpen: true }); // Move to payment step
+        setPaymentModal({ isOpen: true });
       }
-    } catch (error) {
-      setModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo guardar la información inicial.' });
+    } catch (error: any) {
+      console.error("Error en afiliación:", error);
+      setModal({ isOpen: true, type: 'error', title: 'Error de Registro', message: error.message || 'No se pudo procesar la afiliación.' });
       setLoading(false);
     }
   };
@@ -313,6 +353,35 @@ export default function NewMerchantPage() {
                 <div className={styles.filterGroup} style={{ gridColumn: 'span 2' }}><label>Cédula Jurídica / Física</label><input type="text" className={styles.filterInput} value={formData.legalId} onChange={(e) => setFormData({ ...formData, legalId: formatLegalId(e.target.value) })} required /></div>
                 <div className={styles.filterGroup}><label>Teléfono Celular</label><input type="text" className={styles.filterInput} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })} required /></div>
                 <div className={styles.filterGroup} style={{ gridColumn: 'span 3' }}><label>Persona de Contacto</label><div style={{ position: 'relative' }}><User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} /><input type="text" className={styles.filterInput} style={{ paddingLeft: '40px' }} value={formData.contactName} onChange={(e) => setFormData({ ...formData, contactName: e.target.value })} required /></div></div>
+                <div className={styles.filterGroup}><label>País / Zona Horaria</label>
+                  <select 
+                    className={styles.filterSelect} 
+                    value={formData.timezone} 
+                    onChange={(e) => {
+                      const tz = e.target.value;
+                      const countryMap: any = {
+                        "America/Costa_Rica": "Costa Rica",
+                        "America/Panama": "Panamá",
+                        "America/Managua": "Nicaragua",
+                        "America/Guatemala": "Guatemala",
+                        "America/El_Salvador": "El Salvador",
+                        "America/Tegucigalpa": "Honduras",
+                        "America/Mexico_City": "México",
+                        "America/Bogota": "Colombia"
+                      };
+                      setFormData({...formData, timezone: tz, country: countryMap[tz]});
+                    }}
+                  >
+                    <option value="America/Costa_Rica">🇨🇷 Costa Rica</option>
+                    <option value="America/Panama">🇵🇦 Panamá</option>
+                    <option value="America/Managua">🇳🇮 Nicaragua</option>
+                    <option value="America/Guatemala">🇬🇹 Guatemala</option>
+                    <option value="America/El_Salvador">🇸🇻 El Salvador</option>
+                    <option value="America/Tegucigalpa">🇭🇳 Honduras</option>
+                    <option value="America/Mexico_City">🇲🇽 México</option>
+                    <option value="America/Bogota">🇨🇴 Colombia</option>
+                  </select>
+                </div>
                 <div className={styles.filterGroup}><label>Provincia</label><select className={styles.filterSelect} value={formData.province} onChange={(e) => setFormData({...formData, province: e.target.value, canton: CR_STRUCTURE[e.target.value][0]})}>{Object.keys(CR_STRUCTURE).map(p => <option key={p} value={p}>{p}</option>)}</select></div>
                 <div className={styles.filterGroup}><label>Cantón</label><select className={styles.filterSelect} value={formData.canton} onChange={(e) => setFormData({...formData, canton: e.target.value})}>{CR_STRUCTURE[formData.province].map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                 <div className={styles.filterGroup}><label>Distrito</label><input type="text" className={styles.filterInput} value={formData.district} onChange={(e) => setFormData({...formData, district: e.target.value})} /></div>
@@ -325,7 +394,51 @@ export default function NewMerchantPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
             <section className={styles.tableContainer} style={{ padding: '32px' }}>
               <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldCheck size={16} color="var(--brand-accent)" /> Acceso Administrativo</h3>
-              <div className={styles.filterGroup}><label>Email del Administrador</label><input type="email" className={styles.filterInput} style={{ fontSize: '1.2rem', fontWeight: 700 }} value={formData.adminEmail} onChange={(e) => setFormData({...formData, adminEmail: e.target.value})} required /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className={styles.filterGroup}>
+                  <label>Email del Administrador</label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
+                    <input type="email" className={styles.filterInput} style={{ paddingLeft: '40px', fontSize: '1.1rem', fontWeight: 700 }} value={formData.adminEmail} onChange={(e) => setFormData({...formData, adminEmail: e.target.value})} placeholder="correo@ejemplo.com" required />
+                  </div>
+                </div>
+
+                <div className={styles.filterGroup}>
+                  <label>Contraseña Inicial</label>
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      className={styles.filterInput} 
+                      style={{ paddingLeft: '40px', paddingRight: '45px', width: '100%' }} 
+                      value={formData.password} 
+                      onChange={(e) => setFormData({...formData, password: e.target.value})} 
+                      placeholder="••••••••"
+                      required 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{ 
+                        position: 'absolute', 
+                        right: '12px', 
+                        top: '50%', 
+                        transform: 'translateY(-50%)', 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'var(--text-tertiary)', 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        zIndex: 5
+                      }}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: '8px' }}>Define la clave de acceso para el nuevo comerciante.</p>
+                </div>
+              </div>
             </section>
 
             <section className={styles.tableContainer} style={{ padding: '32px' }}>
@@ -359,8 +472,31 @@ export default function NewMerchantPage() {
 
         <section className={styles.tableContainer} style={{ padding: '32px', border: formData.acceptTerms ? '1px solid var(--brand-accent)' : '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-            <div onClick={() => setFormData({ ...formData, acceptTerms: !formData.acceptTerms })} style={{ width: '24px', height: '24px', borderRadius: '4px', border: '2px solid', borderColor: formData.acceptTerms ? 'var(--brand-accent)' : 'rgba(255,255,255,0.2)', background: formData.acceptTerms ? 'var(--brand-accent)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{formData.acceptTerms && <Check size={18} color="black" strokeWidth={4} />}</div>
-            <div style={{ flex: 1 }}><h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '8px' }}>Términos de Afiliación</h3><p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Acepto los términos de operación del marketplace.</p></div>
+            <div onClick={() => setFormData({ ...formData, acceptTerms: !formData.acceptTerms })} style={{ width: '24px', height: '24px', borderRadius: '4px', border: '2px solid', borderColor: formData.acceptTerms ? 'var(--brand-accent)' : 'rgba(255,255,255,0.2)', background: formData.acceptTerms ? 'var(--brand-accent)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '4px' }}>{formData.acceptTerms && <Check size={18} color="black" strokeWidth={4} />}</div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '12px', color: 'var(--brand-accent)' }}>Contrato de Afiliación Comercial (Go-Shopping Elite)</h3>
+              <div style={{ 
+                fontSize: '0.75rem', 
+                color: 'var(--text-tertiary)', 
+                lineHeight: '1.6', 
+                maxHeight: '150px', 
+                overflowY: 'auto',
+                padding: '16px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '8px',
+                marginBottom: '12px'
+              }}>
+                <p>Al marcar esta casilla, el Comerciante acepta los siguientes términos:</p>
+                <ul style={{ paddingLeft: '20px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <li><strong>Operación:</strong> Go-Shopping actúa como plataforma de marketplace y pasarela de visibilidad.</li>
+                  <li><strong>Comisiones:</strong> Se aplicará la comisión correspondiente al plan seleccionado sobre cada venta finalizada.</li>
+                  <li><strong>Pagos:</strong> Los pagos vía SINPE deben ser validados por el administrador antes del despacho.</li>
+                  <li><strong>Garantía:</strong> El comercio es responsable de la calidad y garantía de los productos entregados.</li>
+                  <li><strong>Privacidad:</strong> Los datos de los clientes deben ser tratados bajo estrictas normas de confidencialidad.</li>
+                </ul>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Acepto los términos de operación y autorizo el inicio del proceso de afiliación.</p>
+            </div>
           </div>
         </section>
 

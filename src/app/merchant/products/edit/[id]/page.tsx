@@ -1,46 +1,45 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Upload, Plus, Camera, Loader2, ArrowLeft, CheckCircle, Save } from 'lucide-react';
-import { addProduct } from '@/lib/services/products';
+import { useRouter, useParams } from 'next/navigation';
+import { Upload, Plus, Camera, Loader2, ArrowLeft, CheckCircle, Save, Trash2 } from 'lucide-react';
+import { getProductById, updateProduct, deleteProduct, Product } from '@/lib/services/products';
 import { getCategories } from '@/lib/services/categories';
-import { getMerchantByOwnerUid } from '@/lib/services/merchants';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import styles from '../../../admin/admin.module.css';
+import { getMerchantByOwnerUid } from '@/lib/services/merchants';
+import styles from '../../../../admin/admin.module.css';
 
-export default function MerchantNewProductPage() {
+export default function MerchantEditProductPage() {
   const router = useRouter();
-  const { userData } = useAuth();
+  const params = useParams();
+  const id = params.id as string;
+  const { userData, loading: loadingAuth } = useAuth();
+  
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [success, setSuccess] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
-  const [images, setImages] = useState<{file: File, preview: string}[]>([]);
-  const [video, setVideo] = useState<{file: File, preview: string} | null>(null);
+  const [images, setImages] = useState<{file?: File, preview: string}[]>([]);
+  const [video, setVideo] = useState<{file?: File, preview: string} | null>(null);
   const [modal, setModal] = useState<{
     isOpen: boolean;
     type: ModalType;
     title: string;
     message: string;
-  }>({ 
-    isOpen: false, 
-    type: 'success', 
-    title: '', 
-    message: '' 
-  });
+  }>({ isOpen: false, type: 'info', title: '', message: '' });
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
+    cost: '',
+    taxPercentage: '13',
     category: '',
     stock: '10',
     minStock: '3',
-    cost: '',
-    taxPercentage: '13',
     featured: false,
     onSale: false,
     salePrice: '',
@@ -51,16 +50,75 @@ export default function MerchantNewProductPage() {
   });
 
   useEffect(() => {
-    const fetchCats = async () => {
-      const data = await getCategories();
-      const names = data.map(c => c.name);
-      setCategories(names);
-      if (names.length > 0) {
-        setFormData(prev => ({ ...prev, category: names[0] }));
+    const init = async () => {
+      if (loadingAuth) return;
+
+      try {
+        const [categoriesData, productData] = await Promise.all([
+          getCategories(),
+          getProductById(id)
+        ]);
+
+        const catNames = categoriesData.map(c => c.name);
+        setCategories(catNames);
+
+        if (productData) {
+          // SECURITY CHECK WITH AUTO-RECOVERY
+          let effectiveMerchantId = userData?.merchantId;
+          const isAdmin = userData?.role === 'admin';
+
+          if (!effectiveMerchantId && !isAdmin && userData?.uid) {
+            try {
+              const merchant = await getMerchantByOwnerUid(userData.uid);
+              if (merchant) effectiveMerchantId = merchant.id;
+            } catch (e) {
+              console.error("Auto-recovery error:", e);
+            }
+          }
+
+          // Final Check
+          if (!isAdmin && productData.merchantId !== effectiveMerchantId) {
+             console.warn("Security mismatch", { prod: productData.merchantId, user: effectiveMerchantId });
+             router.push('/merchant/dashboard');
+             return;
+          }
+
+          setFormData({
+            name: productData.name,
+            description: productData.description || '',
+            price: (productData.price * 100).toString(),
+            cost: ((productData.cost || 0) * 100).toString(),
+            taxPercentage: (productData.taxPercentage || 13).toString(),
+            category: productData.category || (catNames[0] || ''),
+            stock: productData.stock?.toString() || '0',
+            minStock: productData.minStock?.toString() || '0',
+            featured: productData.featured || false,
+            onSale: productData.onSale || false,
+            salePrice: ((productData.salePrice || 0) * 100).toString(),
+            saleStartsAt: productData.saleStartsAt || '',
+            saleExpiresAt: productData.saleExpiresAt || '',
+            discountType: productData.discountType || 'amount',
+            discountPercent: productData.discountPercent || ''
+          });
+
+          if (productData.images && productData.images.length > 0) {
+            setImages(productData.images.map(url => ({ preview: url })));
+          } else if (productData.imageUrl) {
+            setImages([{ preview: productData.imageUrl }]);
+          }
+          if (productData.videoUrl) {
+            setVideo({ preview: productData.videoUrl });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading product:", error);
+      } finally {
+        setFetching(false);
       }
     };
-    fetchCats();
-  }, []);
+
+    init();
+  }, [id, userData, loadingAuth]);
 
   const handleImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -84,6 +142,29 @@ export default function MerchantNewProductPage() {
     setVideo(null);
   };
 
+  const handleDelete = async () => {
+    setModal({
+      isOpen: true,
+      type: 'warning' as any,
+      title: 'Eliminar Producto',
+      message: '¿Estás seguro de que deseas eliminar este producto de forma permanente? Esta acción no se puede deshacer.',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const success = await deleteProduct(id);
+          if (success) {
+            setSuccess(true);
+            setTimeout(() => router.push('/merchant/products'), 2000);
+          }
+        } catch (error) {
+          console.error("Error deleting product:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
   const formatPrice = (val: string) => {
     if (!val) return '';
     const num = val.replace(/\D/g, '');
@@ -101,47 +182,14 @@ export default function MerchantNewProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (images.length === 0) {
-      setModal({
-        isOpen: true,
-        type: 'warning',
-        title: 'Faltan Imágenes',
-        message: 'Por favor, añade al menos una imagen del producto para continuar.'
-      });
-      return;
-    }
-
-    let effectiveMerchantId = userData?.merchantId;
-
-    if (!effectiveMerchantId) {
-      // AUTO-RECOVERY ATTEMPT
-      if (userData?.uid) {
-        try {
-          const merchant = await getMerchantByOwnerUid(userData.uid);
-          if (merchant) {
-            // Found it! Use it.
-            effectiveMerchantId = merchant.id;
-          }
-        } catch (e) {
-          console.error("Auto-recovery failed", e);
-        }
-      }
-
-      if (!effectiveMerchantId) {
-        setModal({
-          isOpen: true,
-          type: 'error',
-          title: 'Sesión Inválida',
-          message: 'No se pudo identificar tu comercio. Por favor, re-inicia sesión.'
-        });
-        return;
-      }
-    }
-
     setLoading(true);
 
     try {
-      await addProduct({
+      const remainingImageUrls = images.filter(img => !img.file).map(img => img.preview);
+      const newImageFiles = images.filter(img => img.file).map(img => img.file as File);
+      const newVideoFile = video?.file;
+
+      await updateProduct(id, {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price) / 100,
@@ -154,36 +202,44 @@ export default function MerchantNewProductPage() {
         onSale: formData.onSale,
         salePrice: parseFloat(formData.salePrice) / 100,
         saleStartsAt: formData.saleStartsAt,
-        saleExpiresAt: formData.saleExpiresAt,
-        merchantId: effectiveMerchantId,
-        isActive: true
+        saleExpiresAt: formData.saleExpiresAt
       }, 
-      images.map(img => img.file), 
-      video?.file || undefined
+      newImageFiles, 
+      remainingImageUrls,
+      newVideoFile
       );
 
       setSuccess(true);
-      setTimeout(() => router.push('/merchant/dashboard'), 3000);
+      setTimeout(() => router.push('/merchant/products'), 2000);
     } catch (error) {
       setModal({
         isOpen: true,
         type: 'error',
-        title: 'Error de Registro',
-        message: 'Hubo un problema al registrar el producto. Por favor, intenta de nuevo.'
+        title: 'Error de Actualización',
+        message: 'No se pudieron guardar los cambios. Intenta de nuevo.'
       });
     } finally {
       setLoading(false);
     }
   };
 
+  if (fetching) {
+    return (
+      <div className="container" style={{ padding: '100px', textAlign: 'center' }}>
+        <Loader2 className="spin" size={40} color="var(--brand-accent)" />
+        <p style={{ marginTop: '20px', color: 'var(--text-secondary)' }}>Recuperando datos del producto...</p>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className={styles.modalOverlay}>
         <div className={styles.modal} style={{ maxWidth: '400px', textAlign: 'center', padding: '40px' }}>
           <CheckCircle size={60} color="var(--brand-accent)" style={{ margin: '0 auto 20px' }} />
-          <h2 style={{ marginBottom: '12px' }}>¡Producto Registrado!</h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Tu artículo de excelencia ya está disponible en tu vitrina digital.</p>
-          <button onClick={() => router.push('/merchant/dashboard')} className={styles.approveBtn}>Ir al Panel</button>
+          <h2 style={{ marginBottom: '12px' }}>¡Cambios Guardados!</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>El producto ha sido actualizado con éxito.</p>
+          <button onClick={() => router.push('/merchant/products')} className={styles.approveBtn}>Volver al Inventario</button>
         </div>
       </div>
     );
@@ -193,17 +249,21 @@ export default function MerchantNewProductPage() {
     <div className={`${styles.adminPage} container animate`}>
       <header className={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Link href="/merchant/dashboard" className={styles.viewBtn}>
+          <Link href="/merchant/products" className={styles.viewBtn}>
             <ArrowLeft size={18} />
           </Link>
-          <h1>Publicar <span className={styles.accent}>Nuevo Artículo</span></h1>
+          <h1>Editar <span className={styles.accent}>Producto</span></h1>
+        </div>
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+           <div>Registrado: {new Date().toLocaleDateString()}</div>
+           <div>ID: {id}</div>
         </div>
       </header>
 
       <div className={styles.tableContainer} style={{ padding: '40px' }}>
         <form className={styles.modalContent} style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '40px', padding: 0 }} onSubmit={handleSubmit}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '40px' }}>
             <div className={styles.orderSection}>
               <h3 style={{ marginBottom: '24px' }}>Información Básica</h3>
               
@@ -211,8 +271,8 @@ export default function MerchantNewProductPage() {
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Nombre del Producto</label>
                 <input 
                   type="text" 
-                  placeholder="Nombre impactante..." 
-                  style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }}
+                  className={styles.filterInput}
+                  style={{ width: '100%' }}
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   required
@@ -224,7 +284,6 @@ export default function MerchantNewProductPage() {
                 <RichTextEditor 
                   value={formData.description}
                   onChange={val => setFormData({ ...formData, description: val })}
-                  placeholder="Cuenta la historia de excelencia de tu producto..."
                 />
               </div>
 
@@ -233,8 +292,8 @@ export default function MerchantNewProductPage() {
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Costo (₡)</label>
                   <input 
                     type="text" 
-                    placeholder="0" 
-                    style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }}
+                    className={styles.filterInput}
+                    style={{ width: '100%' }}
                     value={formatPrice(formData.cost)}
                     onChange={e => setFormData({ ...formData, cost: e.target.value.replace(/\D/g, '') })}
                     required
@@ -244,8 +303,8 @@ export default function MerchantNewProductPage() {
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Precio Venta (₡)</label>
                   <input 
                     type="text" 
-                    placeholder="0" 
-                    style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }}
+                    className={styles.filterInput}
+                    style={{ width: '100%' }}
                     value={formatPrice(formData.price)}
                     onChange={handlePriceChange}
                     required
@@ -255,11 +314,11 @@ export default function MerchantNewProductPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
                 <div className={styles.formGroup}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Stock Inicial</label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Stock Actual</label>
                   <input 
                     type="number" 
-                    placeholder="10" 
-                    style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }}
+                    className={styles.filterInput}
+                    style={{ width: '100%' }}
                     value={formData.stock}
                     onChange={e => setFormData({...formData, stock: e.target.value})}
                     required
@@ -269,8 +328,8 @@ export default function MerchantNewProductPage() {
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Stock Mínimo</label>
                   <input 
                     type="number" 
-                    placeholder="3" 
-                    style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }}
+                    className={styles.filterInput}
+                    style={{ width: '100%' }}
                     value={formData.minStock}
                     onChange={e => setFormData({...formData, minStock: e.target.value})}
                     required
@@ -278,22 +337,12 @@ export default function MerchantNewProductPage() {
                 </div>
               </div>
 
-              <div className={styles.formGroup} style={{ marginTop: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Categoría</label>
-                <select 
-                  style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }}
-                  value={formData.category}
-                  onChange={e => setFormData({...formData, category: e.target.value})}
-                >
-                  {categories.map(cat => <option key={cat}>{cat}</option>)}
-                </select>
-              </div>
-
-               <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div className={styles.formGroup}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Impuesto IVA (%)</label>
                     <select 
-                      style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }}
+                      className={styles.filterSelect}
+                      style={{ width: '100%' }}
                       value={formData.taxPercentage}
                       onChange={e => setFormData({...formData, taxPercentage: e.target.value})}
                     >
@@ -313,10 +362,10 @@ export default function MerchantNewProductPage() {
                     />
                     <label htmlFor="featured" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>Producto Destacado</label>
                   </div>
-               </div>
+              </div>
 
                {/* Financial Preview */}
-               <div style={{ marginTop: '32px', padding: '20px', background: 'rgba(197, 160, 89, 0.05)', border: '1px solid var(--border)' }}>
+               <div style={{ marginTop: '32px', padding: '20px', background: 'rgba(212, 175, 55, 0.03)', border: '1px solid rgba(212, 175, 55, 0.1)' }}>
                  <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--brand-accent)', marginBottom: '16px' }}>Proyección Financiera</h4>
                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                    <div>
@@ -357,34 +406,100 @@ export default function MerchantNewProductPage() {
                     </div>
                     {formData.onSale && (
                       <div style={{ display: 'flex', gap: '12px' }}>
-                        <button type="button" onClick={() => setFormData({ ...formData, discountType: 'amount' })} style={{ padding: '4px 10px', fontSize: '0.7rem', background: formData.discountType === 'amount' ? 'var(--brand-accent)' : 'transparent', color: formData.discountType === 'amount' ? 'var(--bg-primary)' : 'var(--text-tertiary)', border: '1px solid var(--border)', cursor: 'pointer' }}>Monto Fijo</button>
-                        <button type="button" onClick={() => setFormData({ ...formData, discountType: 'percent' })} style={{ padding: '4px 10px', fontSize: '0.7rem', background: formData.discountType === 'percent' ? 'var(--brand-accent)' : 'transparent', color: formData.discountType === 'percent' ? 'var(--bg-primary)' : 'var(--text-tertiary)', border: '1px solid var(--border)', cursor: 'pointer' }}>Porcentaje %</button>
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountType: 'amount' })}
+                          style={{ 
+                            padding: '4px 10px', 
+                            fontSize: '0.7rem', 
+                            background: formData.discountType === 'amount' ? 'var(--brand-accent)' : 'transparent',
+                            color: formData.discountType === 'amount' ? 'var(--bg-primary)' : 'var(--text-tertiary)',
+                            border: '1px solid var(--border)',
+                            cursor: 'pointer'
+                          }}
+                        >Monto Fijo</button>
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({ ...formData, discountType: 'percent' })}
+                          style={{ 
+                            padding: '4px 10px', 
+                            fontSize: '0.7rem', 
+                            background: formData.discountType === 'percent' ? 'var(--brand-accent)' : 'transparent',
+                            color: formData.discountType === 'percent' ? 'var(--bg-primary)' : 'var(--text-tertiary)',
+                            border: '1px solid var(--border)',
+                            cursor: 'pointer'
+                          }}
+                        >Porcentaje %</button>
                       </div>
                     )}
                  </div>
 
                  {formData.onSale && (
-                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', animation: 'fadeIn 0.3s ease-out' }}>
                      {formData.discountType === 'amount' ? (
                        <div className={styles.formGroup}>
                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Precio de Oferta (₡)</label>
-                         <input type="text" style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }} value={formatPrice(formData.salePrice)} onChange={e => setFormData({ ...formData, salePrice: e.target.value.replace(/\D/g, '') })} placeholder="0" />
+                         <input 
+                           type="text" 
+                           className={styles.filterInput}
+                           style={{ width: '100%' }}
+                           value={formatPrice(formData.salePrice)}
+                           onChange={e => setFormData({ ...formData, salePrice: e.target.value.replace(/\D/g, '') })}
+                           placeholder="0"
+                         />
                        </div>
                      ) : (
                        <div className={styles.formGroup}>
                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Descuento (%)</label>
-                         <input type="number" style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }} value={formData.discountPercent} onChange={e => { const percent = e.target.value; const basePrice = parseFloat(formData.price) || 0; const newSalePrice = basePrice * (1 - (parseFloat(percent) || 0) / 100); setFormData({ ...formData, discountPercent: percent, salePrice: Math.round(newSalePrice).toString() }); }} placeholder="Ej: 20" />
+                         <input 
+                           type="number" 
+                           max="99"
+                           min="1"
+                           className={styles.filterInput}
+                           style={{ width: '100%' }}
+                           value={formData.discountPercent}
+                           onChange={e => {
+                             const percent = e.target.value;
+                             const basePrice = parseFloat(formData.price) || 0;
+                             const newSalePrice = basePrice * (1 - (parseFloat(percent) || 0) / 100);
+                             setFormData({ 
+                               ...formData, 
+                               discountPercent: percent, 
+                               salePrice: Math.round(newSalePrice).toString() 
+                             });
+                           }}
+                           placeholder="Ej: 20"
+                         />
                        </div>
                      )}
-                     <div className={styles.formGroup}><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Inicia</label><input type="date" style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }} value={formData.saleStartsAt} onChange={e => setFormData({ ...formData, saleStartsAt: e.target.value })} /></div>
-                     <div className={styles.formGroup}><label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Vence</label><input type="date" style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }} value={formData.saleExpiresAt} onChange={e => setFormData({ ...formData, saleExpiresAt: e.target.value })} min={formData.saleStartsAt || new Date().toISOString().split('T')[0]} /></div>
+                     <div className={styles.formGroup}>
+                       <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Inicia el día</label>
+                       <input 
+                         type="date" 
+                         className={styles.filterInput}
+                         style={{ width: '100%' }}
+                         value={formData.saleStartsAt}
+                         onChange={e => setFormData({ ...formData, saleStartsAt: e.target.value })}
+                       />
+                     </div>
+                     <div className={styles.formGroup}>
+                       <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Vence el día</label>
+                       <input 
+                         type="date" 
+                         className={styles.filterInput}
+                         style={{ width: '100%' }}
+                         value={formData.saleExpiresAt}
+                         onChange={e => setFormData({ ...formData, saleExpiresAt: e.target.value })}
+                         min={formData.saleStartsAt || new Date().toISOString().split('T')[0]}
+                       />
+                     </div>
                    </div>
                  )}
                </div>
             </div>
 
             <div className={styles.orderSection}>
-              <h3 style={{ marginBottom: '24px' }}>Galería de Imágenes (Máx 5)</h3>
+              <h3 style={{ marginBottom: '24px' }}>Galería de Imágenes</h3>
               <div className={styles.galleryGrid}>
                 {[...Array(5)].map((_, idx) => {
                   const img = images[idx];
@@ -398,6 +513,7 @@ export default function MerchantNewProductPage() {
                       </div>
                     );
                   }
+                  
                   const isNextUpload = idx === images.length;
                   return (
                     <label key={idx} className={`${styles.mediaSlot} ${!isNextUpload ? styles.emptySlot : ''}`}>
@@ -408,7 +524,9 @@ export default function MerchantNewProductPage() {
                           <span style={{ fontSize: '0.7rem', marginTop: '8px', fontWeight: 600 }}>Agregar Foto</span>
                         </>
                       ) : (
-                        <div style={{ opacity: 0.2 }}><Camera size={20} /></div>
+                        <div style={{ opacity: 0.2 }}>
+                           <Camera size={20} />
+                        </div>
                       )}
                     </label>
                   );
@@ -420,7 +538,9 @@ export default function MerchantNewProductPage() {
                 {video ? (
                   <div className={`${styles.mediaSlot} ${styles.videoSlot}`}>
                     <video src={video.preview} controls />
-                    <button type="button" className={styles.removeMedia} onClick={removeVideo}><Plus size={14} style={{ transform: 'rotate(45deg)' }} /></button>
+                    <button type="button" className={styles.removeMedia} onClick={removeVideo}>
+                      <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
+                    </button>
                   </div>
                 ) : (
                   <label className={`${styles.mediaSlot} ${styles.videoSlot}`}>
@@ -430,30 +550,72 @@ export default function MerchantNewProductPage() {
                   </label>
                 )}
               </div>
-            </div>
-          </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', borderTop: '1px solid var(--border)', paddingTop: '40px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '40px', marginTop: '20px', width: '100%', gap: '24px', gridColumn: 'span 2' }}>
             <button 
               type="button" 
-              className={styles.cancelBtn} 
-              style={{ minWidth: '150px' }}
-              onClick={() => router.push('/merchant/dashboard')}
-            >
-              CANCELAR
-            </button>
-            <button 
-              type="submit" 
-              className={styles.approveBtn} 
-              style={{ minWidth: '300px' }}
+              className={styles.clearBtn}
+              onClick={handleDelete}
               disabled={loading}
+              style={{ 
+                border: '1px solid var(--status-error)', 
+                color: 'var(--status-error)',
+                height: '50px',
+                padding: '0 24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                letterSpacing: '0.05em'
+              }}
             >
-              {loading ? (
-                <><Loader2 className="spin" size={20} /> PUBLICANDO...</>
-              ) : (
-                <><Save size={18} /> PUBLICAR EN MI TIENDA</>
-              )}
+              <Trash2 size={18} /> ELIMINAR PRODUCTO
             </button>
+
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <button 
+                type="button" 
+                className={styles.cancelBtn} 
+                onClick={() => router.push('/merchant/products')}
+                style={{ 
+                  height: '50px', 
+                  minWidth: '150px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em'
+                }}
+              >
+                CANCELAR
+              </button>
+              <button 
+                type="submit" 
+                className={styles.approveBtn} 
+                disabled={loading}
+                style={{ 
+                  height: '50px', 
+                  minWidth: '300px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em'
+                }}
+              >
+                {loading ? (
+                  <><Loader2 className="spin" size={20} /> GUARDANDO...</>
+                ) : (
+                  <><Save size={18} /> GUARDAR CAMBIOS ELITE</>
+                )}
+              </button>
+            </div>
+          </div>
+            </div>
           </div>
         </form>
       </div>

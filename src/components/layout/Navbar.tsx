@@ -9,8 +9,7 @@ import Sidebar from './Sidebar';
 import { useState } from 'react';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
-  const { isAdmin, isMerchant } = useAuth();
+  const { user, userData, logout, isAdmin, isMerchant } = useAuth();
   const { cartCount, setIsCartOpen } = useCart();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 

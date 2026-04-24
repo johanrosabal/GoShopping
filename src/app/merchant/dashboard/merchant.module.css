@@ -1,0 +1,211 @@
+.dashboardContainer {
+  display: flex;
+  min-height: 100vh;
+  background: #050505;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar {
+  width: 280px;
+  background: #0a0a0a;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  padding: 32px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  margin-bottom: 48px;
+}
+
+.brandIcon {
+  color: #D4AF37;
+  width: 32px;
+  height: 32px;
+}
+
+.sidebarHeader h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.accent {
+  color: #D4AF37;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  padding: 0 16px;
+}
+
+.navLink, .navLinkActive {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 0; /* Sharp corners architecture */
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  color: #888;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+}
+
+.navLinkActive {
+  background: rgba(212, 175, 55, 0.1);
+  color: #D4AF37;
+  border-right: 3px solid #D4AF37;
+}
+
+.logoutBtn {
+  margin: 0 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: 1px solid rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.logoutBtn:hover {
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.content {
+  flex: 1;
+  padding: 48px;
+  overflow-y: auto;
+}
+
+.contentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 48px;
+}
+
+.contentHeader h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.contentHeader p {
+  color: #888;
+}
+
+.merchantBadge {
+  background: #D4AF37;
+  color: #000;
+  padding: 6px 12px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+.statCard {
+  background: #0f0f0f;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.statIcon {
+  width: 48px;
+  height: 48px;
+  background: rgba(212, 175, 55, 0.1);
+  color: #D4AF37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+}
+
+.statLabel {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.quickActions h2 {
+  font-size: 1.25rem;
+  margin-bottom: 24px;
+  color: #D4AF37;
+}
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.actionCard {
+  background: #0f0f0f;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  color: #fff;
+  transition: all 0.3s;
+}
+
+.actionCard:hover {
+  border-color: #D4AF37;
+  transform: translateY(-5px);
+  background: #151515;
+}
+
+.actionInner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.actionInner h3 {
+  font-size: 1.1rem;
+}
+
+.actionInner p {
+  font-size: 0.85rem;
+  color: #888;
+}

@@ -6,7 +6,16 @@ if (!key) {
   throw new Error('La variable de entorno ADMIN_SDK_KEY no está definida. Por favor, revisa tu archivo .env');
 }
 
-const serviceAccount = JSON.parse(key);
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(key);
+  // Reparación de saltos de línea en la llave privada
+  if (serviceAccount.private_key) {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
+} catch (e) {
+  throw new Error('Error al parsear ADMIN_SDK_KEY. Asegúrate de que sea un JSON válido.');
+}
 
 if (!admin.apps.length) {
   admin.initializeApp({

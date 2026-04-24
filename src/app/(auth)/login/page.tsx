@@ -24,8 +24,22 @@ export default function LoginPage() {
     setError('');
     
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Obtener el rol directamente para decidir la redirección
+      const { getDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const userData = userDoc.data();
+
+      if (userData?.role === 'admin') {
+        router.push('/admin');
+      } else if (userData?.role === 'merchant_admin') {
+        router.push('/merchant/dashboard');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       setError('Credenciales incorrectas. Por favor intenta de nuevo.');
       console.error(err);

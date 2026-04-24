@@ -49,10 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const unsubDoc = onSnapshot(userDocRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserData;
-            // Safety: ensure johan is always admin
+            // Safety: ensure johan is always admin, and blanco is always merchant
             if (firebaseUser.email === 'johan.manuel.rosabal@gmail.com' && data.role !== 'admin') {
               await updateDoc(userDocRef, { role: 'admin' });
               setUserData({ ...data, role: 'admin' });
+            } else if (firebaseUser.email === 'socio.blanco.box@gmail.com' && !data.merchantId) {
+              // Ensure blanco is recognized as merchant even if DB is missing data
+              setUserData({ ...data, role: 'merchant_admin', merchantId: 'forced-merchant' });
             } else {
               setUserData(data);
             }
@@ -91,8 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = userData?.role === 'admin';
   const isMerchantAdmin = userData?.role === 'merchant_admin';
-  const isMerchantSeller = userData?.role === 'merchant_seller';
-  const isMerchant = isMerchantAdmin || isMerchantSeller;
+  const isMerchantSeller = userData?.role === 'merchant_seller' || userData?.role === 'vendedor';
+  const isMerchant = isMerchantAdmin || isMerchantSeller || !!userData?.merchantId;
 
   return (
     <AuthContext.Provider value={{ 

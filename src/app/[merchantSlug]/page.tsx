@@ -1,112 +1,319 @@
-import { getMerchantBySlug } from "@/lib/services/merchants";
-import { getProducts } from "@/lib/services/products";
-import { notFound } from "next/navigation";
-import { Store, ShoppingBag, MapPin, Instagram, Facebook, LayoutGrid, ShieldCheck, Package } from "lucide-react";
-import Link from "next/link";
-import styles from "../page.module.css"; // Reuse home styles
+'use client';
 
-export default async function MerchantStorePage({ params }: { params: { merchantSlug: string } }) {
-  const { merchantSlug } = params;
-  
-  // 1. Fetch Merchant
-  const merchant = await getMerchantBySlug(merchantSlug);
-  
-  if (!merchant || merchant.status !== 'active') {
-    notFound();
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { getMerchantBySlug, MerchantProfile } from '@/lib/services/merchants';
+import { getProductsByMerchant, Product, getEffectivePrice } from '@/lib/services/products';
+import { 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Clock, 
+  Globe, 
+  Instagram, 
+  Facebook, 
+  MessageCircle,
+  Share2,
+  ShieldCheck,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  Store,
+  ExternalLink,
+  Briefcase,
+  Package,
+  ShoppingBag
+} from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import MerchantFooter from '@/components/merchant/MerchantFooter';
+import ProductCard from '@/components/catalog/ProductCard';
+import styles from './merchant.module.css';
+
+// Importación dinámica para evitar error de 'window is not defined' en SSR
+const AddressMap = dynamic(() => import('@/components/profile/AddressMap'), { 
+  ssr: false,
+  loading: () => <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)' }}><Loader2 className="spin" size={24} /></div>
+});
+
+export default function MerchantLandingPage() {
+  const params = useParams();
+  const slug = params.merchantSlug as string;
+  const [merchant, setMerchant] = useState<MerchantProfile | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([9.9333, -84.0833]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      // Timeout de seguridad para evitar carga infinita
+      const timeoutId = setTimeout(() => {
+        if (loading) {
+          setError('La conexión con el servidor está tardando más de lo esperado. Por favor, verifica tu conexión.');
+          setLoading(false);
+        }
+      }, 8000);
+
+      try {
+        setLoading(true);
+        const data = await getMerchantBySlug(slug);
+        if (data) {
+          setMerchant(data);
+          const merchantProducts = await getProductsByMerchant(data.id);
+          setProducts(merchantProducts.filter(p => p.isActive));
+
+          if (data.legalData.mapsUrl) {
+            const coordMatch = data.legalData.mapsUrl.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (coordMatch) {
+              setMapCenter([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])]);
+            }
+          }
+        } else {
+          setError('Comercio no encontrado');
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Error al sincronizar con los servicios de elite');
+      } finally {
+        clearTimeout(timeoutId);
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className={styles.splashContainer}>
+        <div className={styles.splashContent}>
+          <div className={styles.splashBrand}>
+            Go<span className={styles.accent}>Shopping</span>
+          </div>
+          <div className={styles.splashDivider} />
+          <h2 className={styles.splashMerchantName}>
+            {slug.replace(/-/g, ' ').toUpperCase()}
+          </h2>
+          <div className={styles.splashStatus}>
+            <Loader2 className="spin" size={18} color="var(--brand-accent)" />
+            <span>Sincronizando Boutique...</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // 2. Fetch Merchant Products
-  const allProducts = await getProducts();
-  const merchantProducts = allProducts.filter(p => p.merchantId === merchant.id && p.isActive !== false);
+  if (error || !merchant) {
+    return (
+      <div className={styles.errorContainer}>
+        <AlertCircle size={64} color="#ff4d4d" />
+        <h1>Ups! Algo salió mal</h1>
+        <p>{error || 'No pudimos encontrar este comercio.'}</p>
+        <button onClick={() => window.location.href = '/'}>Volver al Inicio</button>
+      </div>
+    );
+  }
+
+  // Helper to check if open
+  const isOpenNow = () => {
+    if (!merchant || !merchant.operatingHours) return false;
+    
+    try {
+      const tz = merchant.timezone || "America/Costa_Rica";
+      
+      // Obtener partes de la fecha de forma ultra-robusta
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', hour12: false
+      });
+      
+      const parts = formatter.formatToParts(new Date());
+      const p: any = {};
+      parts.forEach(({type, value}) => p[type] = value);
+      
+      // Crear objeto fecha basado en las partes (evita errores de parseo de string)
+      const now = new Date(p.year, p.month - 1, p.day, p.hour, p.minute);
+      const dayIndex = now.getDay(); 
+      
+      const dayMaps = [
+        ['sun', 'dom'], ['mon', 'lun'], ['tue', 'mar'], 
+        ['wed', 'mie'], ['thu', 'jue'], ['fri', 'vie'], ['sat', 'sab']
+      ];
+      
+      const targets = dayMaps[dayIndex];
+      const hourKey = Object.keys(merchant.operatingHours).find(key => {
+        const k = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return targets.some(t => k.includes(t));
+      });
+
+      const hours = hourKey ? merchant.operatingHours[hourKey] : null;
+      if (!hours) return false;
+
+      const isOpenFlag = String(hours.isOpen) === 'true';
+      if (!isOpenFlag) return false;
+
+      if (!hours.open || !hours.close) return true;
+
+      const toMin = (t: string) => {
+        const numbers = t.match(/\d+/g);
+        if (!numbers || numbers.length < 1) return 0;
+        const h = parseInt(numbers[0]);
+        const m = parseInt(numbers[1] || '0');
+        return h * 60 + m;
+      };
+
+      const cur = (parseInt(p.hour) * 60) + parseInt(p.minute);
+      const op = toMin(hours.open);
+      const cl = toMin(hours.close);
+
+      if (cl < op) return cur >= op || cur <= cl;
+      return cur >= op && cur <= cl;
+    } catch (e) {
+      console.error("Status check error:", e);
+      return true;
+    }
+  };
+
+  const isCurrentlyOpen = isOpenNow();
 
   return (
-    <div className={styles.page}>
-      <header className={styles.hero} style={{ height: '50vh', minHeight: '400px' }}>
+    <main className={styles.main}>
+      {/* Sub Top Navigation */}
+      <nav className={styles.subPageNav}>
+        <div className={styles.navContainer}>
+          <a href="#inicio" className={`${styles.navLink} ${styles.navLinkActive}`}>Inicio</a>
+          <a href="#catalogo" className={styles.navLink}>Catálogo</a>
+          <a href="#ubicacion" className={styles.navLink}>Ubicación</a>
+          <a href="#contacto" className={styles.navLink}>Contacto</a>
+        </div>
+      </nav>
+
+      {/* Cinematic Hero Section */}
+      <section className={styles.hero}>
         <div className={styles.heroBackground}>
-          <img 
-            src={merchant.bannerUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop'} 
-            alt={merchant.name} 
-            className={styles.heroImage}
-          />
-          <div className={styles.heroOverlay} style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.8) 100%)' }}></div>
+          {merchant.bannerUrl ? (
+            <Image 
+              src={merchant.bannerUrl} 
+              alt="" 
+              fill 
+              sizes="100vw"
+              className={styles.heroBackgroundImage}
+            />
+          ) : (
+            <div className={styles.bannerPlaceholder} />
+          )}
+          <div className={styles.heroOverlay} />
         </div>
 
-        <div className="container" style={{ position: 'relative', zIndex: 10, height: '100%', display: 'flex', alignItems: 'flex-end', paddingBottom: '60px' }}>
-          <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
-            <div style={{ 
-              width: '120px', 
-              height: '120px', 
-              background: 'white', 
-              borderRadius: '12px', 
-              padding: '12px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {merchant.logoUrl ? (
-                <img src={merchant.logoUrl} alt={merchant.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-              ) : (
-                <Store size={60} color="var(--brand-accent)" />
+        <div className={styles.heroContent}>
+          <div className={styles.logoWrapper}>
+            {merchant.logoUrl ? (
+              <Image src={merchant.logoUrl} alt={merchant.name} width={240} height={240} className={styles.logo} />
+            ) : (
+              <div className={styles.logoPlaceholder}><Store size={60} /></div>
+            )}
+          </div>
+
+          <div className={styles.statusBadge} style={{ background: isCurrentlyOpen ? '#10b981' : '#ef4444' }}>
+            {isCurrentlyOpen ? 'ABIERTO' : 'CERRADO'}
+          </div>
+
+          <div className={styles.merchantHeader}>
+            <h1>{merchant.name.toUpperCase()}</h1>
+            <div className={styles.locationSummary}>
+              <span>{merchant.legalData.province}</span>
+              <span style={{ opacity: 0.3 }}>•</span>
+              <span>{merchant.legalData.canton}</span>
+            </div>
+          </div>
+
+          <div className={styles.heroManifesto}>
+            <span className={styles.sectionBadge}>Nuestra Esencia</span>
+            <p className={styles.heroDescription}>
+              {merchant.description || 'Bienvenido a una experiencia de compra exclusiva. Este comercio se distingue por su compromiso con la excelencia y el servicio personalizado.'}
+            </p>
+            
+            <div className={styles.heroActions}>
+              {merchant.contact.whatsapp && (merchant.socialConfig?.showWhatsapp ?? true) && (
+                <a href={`https://wa.me/${merchant.contact.whatsapp}`} target="_blank" className={`${styles.btn} ${styles.btnWhatsapp}`}>
+                  <MessageCircle size={20} />
+                  WhatsApp Boutique
+                </a>
               )}
+              <button className={`${styles.btn} ${styles.btnShare}`}>
+                <Share2 size={18} />
+                Compartir Perfil
+              </button>
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <span className={styles.badge} style={{ marginBottom: 0, background: 'var(--brand-accent)', color: 'black' }}>Socio Verificado</span>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  {merchant.contact.instagram && <Link href={merchant.contact.instagram} style={{ color: 'white' }}><Instagram size={18} /></Link>}
-                  {merchant.contact.facebook && <Link href={merchant.contact.facebook} style={{ color: 'white' }}><Facebook size={18} /></Link>}
-                </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Content Grid */}
+      <div className={styles.container}>
+        <div className={styles.grid}>
+          {/* Left: Boutique Details */}
+          <div className={styles.contentColumn}>
+            <div id="catalogo" className={styles.sectionHeader}>
+              <span className={styles.sectionBadge}>Piezas Maestras</span>
+              <h2 className={styles.sectionTitle}>
+                Selección Elite
+              </h2>
+            </div>
+
+            {products.length > 0 ? (
+              <div className={styles.productGrid}>
+                {products.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               </div>
-              <h1 style={{ fontSize: '3rem', margin: 0, fontWeight: 900 }}>{merchant.name}</h1>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', marginTop: '4px', maxWidth: '600px' }}>
-                {merchant.description || 'Descubre la excelencia artesanal y curaduría exclusiva de nuestro socio comercial.'}
-              </p>
+            ) : (
+              <div className={styles.productsPlaceholder}>
+                <div style={{ color: '#D4AF37', marginBottom: '30px' }}><Briefcase size={40} /></div>
+                <h3>Próximamente</h3>
+                <p>Nuestras colecciones exclusivas estarán disponibles muy pronto.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Space for future side widgets if needed, or empty for minimalist look */}
+          <aside className={styles.sideColumn}>
+            {/* Se eliminaron Horarios, Mapa y Certificado ya que ahora están en el footer */}
+          </aside>
+        </div>
+      </div>
+
+      <section className={styles.trustSection}>
+        <div className={styles.container}>
+          <div className={styles.features}>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <Zap size={32} />
+              </div>
+              <h3>Entrega Inmediata</h3>
+              <p>Logística de vanguardia garantizando envíos el mismo día dentro del Gran Área Metropolitana.</p>
+            </div>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <ShieldCheck size={32} />
+              </div>
+              <h3>Garantía de Autenticidad</h3>
+              <p>Cada pieza es sometida a un riguroso proceso de verificación por especialistas antes de su entrega.</p>
+            </div>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <Star size={32} />
+              </div>
+              <h3>Soporte Executive</h3>
+              <p>Atención personalizada multicanal para una experiencia de post-venta al nivel de su inversión.</p>
             </div>
           </div>
         </div>
-      </header>
+      </section>
 
-      <main className="container" style={{ padding: '80px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <LayoutGrid size={24} color="var(--brand-accent)" />
-            <h2 style={{ fontSize: '1.8rem', margin: 0 }}>Colección <span className={styles.accent}>Exclusiva</span></h2>
-          </div>
-          <span style={{ color: 'var(--text-tertiary)' }}>{merchantProducts.length} Productos Disponibles</span>
-        </div>
-
-        {merchantProducts.length > 0 ? (
-          <div className={styles.productGrid}>
-            {merchantProducts.map(product => (
-              <Link key={product.id} href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', overflow: 'hidden', transition: 'all 0.3s' }} className="animate hover-up">
-                  <div style={{ height: '300px', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
-                    <img 
-                      src={product.imageUrl} 
-                      alt={product.name} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </div>
-                  <div style={{ padding: '24px' }}>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--brand-accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{product.category}</span>
-                    <h3 style={{ margin: '8px 0', fontSize: '1.2rem' }}>{product.name}</h3>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-                      <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>₡{product.price.toLocaleString()}</span>
-                      <ShoppingBag size={18} color="var(--brand-accent)" />
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div style={{ padding: '100px', textAlign: 'center', background: 'var(--bg-secondary)', border: '1px dashed var(--border)' }}>
-            <Package size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
-            <p style={{ color: 'var(--text-tertiary)' }}>Este comercio aún no ha publicado productos en su vitrina digital.</p>
-          </div>
-        )}
-      </main>
-    </div>
+      <MerchantFooter merchant={merchant} mapCenter={mapCenter} />
+    </main>
   );
 }

@@ -1,137 +1,303 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import { 
-  ShoppingBag, 
-  Package, 
-  ArrowRight, 
   Store, 
-  TrendingUp, 
-  Clock, 
-  MessageSquare,
+  Package, 
+  ShoppingBag, 
+  Settings, 
+  LayoutDashboard, 
+  LogOut,
+  ChevronRight,
+  TrendingUp,
+  Users,
+  Coins,
   Globe,
-  Settings,
-  Plus
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { getMerchantById, MerchantProfile } from '@/lib/services/merchants';
-import styles from '../../admin/admin.module.css'; // Reusing admin styles
+import { getMerchantByOwnerUid, getMerchantById } from '@/lib/services/merchants';
+import styles from './merchant.module.css';
 
 export default function MerchantDashboard() {
-  const { userData } = useAuth();
-  const [merchant, setMerchant] = useState<MerchantProfile | null>(null);
+  const { user, userData, loading: authLoading, logout } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [merchant, setMerchant] = useState<any>(null);
+  const [currentTime, setCurrentTime] = useState<string>('');
+
+  // Update clock every minute
+  useEffect(() => {
+    const updateClock = () => {
+      const tz = merchant?.timezone || "America/Costa_Rica";
+      try {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        setCurrentTime(formatter.format(new Date()));
+      } catch (e) {
+        console.error("Clock update error:", e);
+      }
+    };
+
+    updateClock();
+    const interval = setInterval(updateClock, 30000); // Actualizar cada 30 seg
+    return () => clearInterval(interval);
+  }, [merchant]);
+
+  const tzMap: any = {
+    "America/Costa_Rica": "CR",
+    "America/Panama": "PA",
+    "America/Managua": "NI",
+    "America/Guatemala": "GT",
+    "America/El_Salvador": "SV",
+    "America/Tegucigalpa": "HN",
+    "America/Mexico_City": "MX",
+    "America/Bogota": "CO"
+  };
+  const tzCode = tzMap[merchant?.timezone || "America/Costa_Rica"] || "CR";
+
+  const isOpenNow = (m: any) => {
+    if (!m || !m.operatingHours) return false;
+    
+    try {
+      const tz = m.timezone || "America/Costa_Rica";
+      
+      // Obtener partes de la fecha de forma ultra-robusta
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', hour12: false
+      });
+      
+      const parts = formatter.formatToParts(new Date());
+      const p: any = {};
+      parts.forEach(({type, value}) => p[type] = value);
+      
+      const now = new Date(p.year, p.month - 1, p.day, p.hour, p.minute);
+      const dayIndex = now.getDay(); 
+      
+      const dayMaps = [
+        ['sun', 'dom'], ['mon', 'lun'], ['tue', 'mar'], 
+        ['wed', 'mie'], ['thu', 'jue'], ['fri', 'vie'], ['sat', 'sab']
+      ];
+      
+      const targets = dayMaps[dayIndex];
+      const hourKey = Object.keys(m.operatingHours).find(key => {
+        const k = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return targets.some(t => k.includes(t));
+      });
+
+      const hours = hourKey ? m.operatingHours[hourKey] : null;
+      if (!hours) return false;
+
+      const isOpenFlag = String(hours.isOpen) === 'true';
+      if (!isOpenFlag) return false;
+
+      if (!hours.open || !hours.close) return true;
+
+      const toMin = (t: string) => {
+        const numbers = t.match(/\d+/g);
+        if (!numbers || numbers.length < 1) return 0;
+        const h = parseInt(numbers[0]);
+        const m = parseInt(numbers[1] || '0');
+        return h * 60 + m;
+      };
+
+      const cur = (parseInt(p.hour) * 60) + parseInt(p.minute);
+      const op = toMin(hours.open);
+      const cl = toMin(hours.close);
+
+      if (cl < op) return cur >= op || cur <= cl;
+      return cur >= op && cur <= cl;
+    } catch (e) {
+      return true;
+    }
+  };
+
+  const isOnline = merchant ? isOpenNow(merchant) : false;
 
   useEffect(() => {
-    if (userData?.merchantId) {
-      getMerchantById(userData.merchantId).then(data => {
-        setMerchant(data);
-        setLoading(false);
-      });
-    }
-  }, [userData]);
+    const init = async () => {
+      if (authLoading) return;
+      
+      if (!user) {
+        router.push('/login');
+        return;
+      }
 
-  if (loading) {
+      if (userData?.role !== 'merchant_admin' && userData?.role !== 'admin' && userData?.role !== 'merchant_seller') {
+        router.push('/');
+        return;
+      }
+
+      try {
+        let mData = null;
+        
+        // 1. Try by merchantId from profile
+        if (userData?.merchantId) {
+          mData = await getMerchantById(userData.merchantId);
+        }
+        
+        // 2. Auto-recovery: Try by owner UID
+        if (!mData && userData?.uid) {
+          mData = await getMerchantByOwnerUid(userData.uid);
+        }
+
+        if (mData) {
+          setMerchant(mData);
+        }
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, [user, userData, authLoading, router]);
+
+  if (authLoading || loading) {
     return (
-      <div className="container" style={{ padding: '100px', textAlign: 'center' }}>
-        <Store className="spin" size={40} color="#8b5cf6" />
-        <p style={{ marginTop: '20px', color: 'var(--text-secondary)' }}>Cargando portal de socio...</p>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050505', color: '#D4AF37' }}>
+        Cargando Panel Elite...
       </div>
     );
   }
 
-  const modules = [
-    {
-      title: 'Mis Pedidos',
-      desc: 'Gestiona tus ventas y tickets locales.',
-      icon: <ShoppingBag size={32} />,
-      color: '#f59e0b',
-      link: '/merchant/orders'
-    },
-    {
-      title: 'Mi Inventario',
-      desc: 'Control de tus productos y existencias.',
-      icon: <Package size={32} />,
-      color: 'var(--brand-accent)',
-      link: '/merchant/products'
-    },
-    {
-      title: 'Soporte Directo',
-      desc: 'Chats con tus clientes.',
-      icon: <MessageSquare size={32} />,
-      color: '#3498db',
-      link: '/merchant/chats'
-    },
-    {
-      title: 'Configuración de Tienda',
-      desc: 'Branding, Redes y Pagos.',
-      icon: <Settings size={32} />,
-      color: '#8b5cf6',
-      link: '/merchant/settings'
-    }
-  ];
-
   return (
-    <div className={`${styles.adminPage} container`}>
-      <header className={`${styles.header} animate`}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#8b5cf6', marginBottom: '16px' }}>
-          <Store size={20} />
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Portal de Socio Elite</span>
+    <div className={styles.dashboardContainer}>
+      <aside className={styles.sidebar}>
+        <div className={styles.sidebarHeader}>
+          <Store className={styles.brandIcon} />
+          <h2>Elite <span className={styles.accent}>Merchant</span></h2>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        
+        <nav className={styles.nav}>
+          <Link href="/merchant/dashboard" className={styles.navLinkActive}>
+            <LayoutDashboard size={20} /> Panel Principal
+          </Link>
+          <Link href="/merchant/products" className={styles.navLink}>
+            <Package size={20} /> Mis Productos
+          </Link>
+          <Link href="/merchant/orders" className={styles.navLink}>
+            <ShoppingBag size={20} /> Pedidos
+          </Link>
+          <Link href="/merchant/settings" className={styles.navLink}>
+            <Settings size={20} /> Configuración
+          </Link>
+        </nav>
+
+        <button onClick={logout} className={styles.logoutBtn}>
+          <LogOut size={20} /> Cerrar Sesión
+        </button>
+      </aside>
+
+      <main className={styles.content}>
+        <header className={styles.contentHeader}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 style={{ fontSize: '2.5rem' }}>
-              Dashboard: <span style={{ color: '#8b5cf6' }}>{merchant?.name}</span>
-            </h1>
-            <p style={{ color: 'var(--text-tertiary)', marginTop: '8px', fontSize: '1.1rem' }}>
-              Gestión centralizada para tu negocio en Go-Shopping.
-            </p>
-          </div>
-          <Link href={`/${merchant?.slug}`} target="_blank" className={styles.approveBtn} style={{ background: '#8b5cf6' }}>
-            <Globe size={18} /> Ver mi Tienda Pública
-          </Link>
-        </div>
-      </header>
-
-      {/* KPI Section (Simplified for now) */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-            <TrendingUp size={24} />
-          </div>
-          <div className={styles.statInfo}>
-            <h4>Estado Suscripción</h4>
-            <div className={styles.statValue} style={{ fontSize: '1.5rem', color: '#10b981' }}>{merchant?.subscriptionType.toUpperCase()}</div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Próximo pago: Proximamente</p>
-          </div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}>
-            <Clock size={24} />
-          </div>
-          <div className={styles.statInfo}>
-            <h4>Pedidos del Mes</h4>
-            <div className={styles.statValue} style={{ fontSize: '1.5rem' }}>0</div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Ventas directas</p>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.modulesGrid}>
-        {modules.map((mod, idx) => (
-          <Link key={idx} href={mod.link} className={`${styles.moduleCard} animate`} style={{ animationDelay: `${idx * 0.1}s` }}>
-            <div className={styles.moduleIcon} style={{ background: `${mod.color}15`, color: mod.color }}>
-              {mod.icon}
+            <h1 className={styles.welcomeTitle}>Bienvenido, <span style={{ color: 'var(--brand-accent)' }}>{userData?.displayName || 'Merchant'}</span></h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>Gestionando {merchant?.name}</p>
+              {merchant && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  padding: '4px 10px', 
+                  borderRadius: '20px', 
+                  background: isOnline ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  border: `1px solid ${isOnline ? '#22c55e' : '#ef4444'}`,
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  color: isOnline ? '#22c55e' : '#ef4444',
+                  letterSpacing: '0.05em'
+                }}>
+                  <div style={{ 
+                    width: '6px', 
+                    height: '6px', 
+                    borderRadius: '50%', 
+                    background: isOnline ? '#22c55e' : '#ef4444',
+                    boxShadow: isOnline ? '0 0 10px #22c55e' : 'none'
+                  }} />
+                  {isOnline ? 'TIENDA ONLINE' : 'TIENDA OFFLINE'}
+                </div>
+              )}
+              {currentTime && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  color: 'var(--text-tertiary)',
+                  fontSize: '0.75rem',
+                  marginLeft: '8px',
+                  background: 'rgba(255,255,255,0.03)',
+                  padding: '4px 10px',
+                  borderRadius: '6px'
+                }}>
+                  <Clock size={12} style={{ color: 'var(--brand-accent)' }} />
+                  <span style={{ fontWeight: 600 }}>{currentTime}</span>
+                  <span style={{ opacity: 0.5, fontSize: '0.65rem' }}> ({tzCode})</span>
+                </div>
+              )}
             </div>
-            <div className={styles.moduleInfo}>
-              <h3>{mod.title}</h3>
-              <p>{mod.desc}</p>
+          </div>
+          <div className={styles.merchantBadge}>
+            SOCIO ELITE
+          </div>
+        </div>
+        </header>
+
+        <div className={styles.statsGrid}>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><Coins /></div>
+            <div className={styles.statInfo}>
+              <span className={styles.statLabel}>Ventas del Mes</span>
+              <span className={styles.statValue}>₡0</span>
             </div>
-            <ArrowRight size={20} className={styles.arrow} />
-          </Link>
-        ))}
-      </div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><ShoppingBag /></div>
+            <div className={styles.statInfo}>
+              <span className={styles.statLabel}>Pedidos Nuevos</span>
+              <span className={styles.statValue}>0</span>
+            </div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><Package /></div>
+            <div className={styles.statInfo}>
+              <span className={styles.statLabel}>Productos Activos</span>
+              <span className={styles.statValue}>0</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.quickActions}>
+          <h2>Acciones Rápidas</h2>
+          <div className={styles.actionGrid}>
+            <Link href="/merchant/products/new" className={styles.actionCard}>
+              <div className={styles.actionInner}>
+                <Package size={24} />
+                <h3>Agregar Producto</h3>
+                <p>Publica un nuevo artículo en tu catálogo.</p>
+              </div>
+              <ChevronRight size={20} />
+            </Link>
+            <Link href={`/${merchant?.slug || ''}`} className={styles.actionCard} target="_blank">
+              <div className={styles.actionInner}>
+                <Globe size={24} />
+                <h3>Ver mi Tienda</h3>
+                <p>Previsualiza cómo ven tus clientes la landing page.</p>
+              </div>
+              <ChevronRight size={20} />
+            </Link>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

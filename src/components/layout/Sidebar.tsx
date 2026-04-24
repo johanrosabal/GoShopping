@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Home, ShoppingBag, Info, Phone, Package, ShieldCheck, LogIn, LogOut, User, Heart, MessageSquare } from 'lucide-react';
+import { X, Home, ShoppingBag, Info, Phone, Package, ShieldCheck, LogIn, LogOut, User, Heart, MessageSquare, Store } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { subscribeToNotifications, Notification } from '@/lib/services/notifications';
@@ -13,7 +13,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isMerchant } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </span>
                   )}
                 </Link>
-                {isAdmin && (
+                 {isAdmin && (
                   <>
                     <Link href="/admin" className={styles.navLink} onClick={onClose}>
                       <ShieldCheck size={20} color="var(--brand-accent)" /> Panel Admin
@@ -93,6 +93,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <MessageSquare size={20} color="var(--brand-accent)" /> Soporte Chat
                     </Link>
                   </>
+                )}
+                {isMerchant && (
+                  <Link href="/merchant/dashboard" className={styles.navLink} onClick={onClose}>
+                    <Store size={20} color="#8b5cf6" /> Panel de Socio
+                  </Link>
                 )}
                 <button className={styles.navLink} onClick={() => { logout(); onClose(); }} style={{ border: 'none', background: 'transparent', width: '100%', cursor: 'pointer' }}>
                   <LogOut size={20} /> Cerrar Sesión

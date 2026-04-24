@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Upload, Plus, Camera, Loader2, ArrowLeft, CheckCircle, Save } from 'lucide-react';
-import { getProductById, updateProduct, Product } from '@/lib/services/products';
+import { Upload, Plus, Camera, Loader2, ArrowLeft, CheckCircle, Save, Trash2 } from 'lucide-react';
+import { getProductById, updateProduct, deleteProduct, Product } from '@/lib/services/products';
 import { getCategories } from '@/lib/services/categories';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import StatusModal from '@/components/common/StatusModal';
@@ -103,6 +103,40 @@ export default function EditProductPage() {
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleVideoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setVideo({ file, preview: URL.createObjectURL(file) });
+    }
+  };
+
+  const removeVideo = () => {
+    setVideo(null);
+  };
+
+  const handleDelete = async () => {
+    setModal({
+      isOpen: true,
+      type: 'warning' as any,
+      title: 'Eliminar Producto',
+      message: '¿Estás seguro de que deseas eliminar este producto de forma permanente? Esta acción no se puede deshacer.',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const success = await deleteProduct(id);
+          if (success) {
+            setSuccess(true);
+            setTimeout(() => router.push('/admin/products'), 2000);
+          }
+        } catch (error) {
+          console.error("Error deleting product:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const formatPrice = (val: string) => {
@@ -277,6 +311,17 @@ export default function EditProductPage() {
                     required
                   />
                 </div>
+              </div>
+
+              <div className={styles.formGroup} style={{ marginTop: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Categoría</label>
+                <select 
+                  style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '0', color: 'var(--text-primary)' }}
+                  value={formData.category}
+                  onChange={e => setFormData({...formData, category: e.target.value})}
+                >
+                  {categories.map(cat => <option key={cat}>{cat}</option>)}
+                </select>
               </div>
 
               <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -481,30 +526,89 @@ export default function EditProductPage() {
                   );
                 })}
               </div>
+              <h3 style={{ marginTop: '32px', marginBottom: '24px' }}>Video de Muestra (1)</h3>
+              <div className={`${styles.galleryGrid} ${styles.videoGrid}`}>
+                {video ? (
+                  <div className={`${styles.mediaSlot} ${styles.videoSlot}`}>
+                    <video src={video.preview} controls />
+                    <button type="button" className={styles.removeMedia} onClick={removeVideo}>
+                      <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className={`${styles.mediaSlot} ${styles.videoSlot}`}>
+                    <input type="file" hidden accept="video/*" onChange={handleVideoAdd} />
+                    <Upload size={24} color="var(--text-tertiary)" />
+                    <span style={{ fontSize: '0.8rem', marginTop: '8px' }}>Subir Video Showcase</span>
+                  </label>
+                )}
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', borderTop: '1px solid var(--border)', paddingTop: '40px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '40px', marginTop: '20px', width: '100%', gap: '24px' }}>
             <button 
               type="button" 
-              className={styles.cancelBtn} 
-              style={{ minWidth: '150px' }}
-              onClick={() => router.push('/admin/products')}
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              className={styles.approveBtn} 
-              style={{ minWidth: '300px' }}
+              className={styles.clearBtn}
+              onClick={handleDelete}
               disabled={loading}
+              style={{ 
+                border: '1px solid var(--status-error)', 
+                color: 'var(--status-error)',
+                height: '50px',
+                padding: '0 24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                letterSpacing: '0.05em'
+              }}
             >
-              {loading ? (
-                <><Loader2 className="spin" size={20} /> Guardando Cambios...</>
-              ) : (
-                <><Save size={18} /> Guardar Cambios Elite</>
-              )}
+              <Trash2 size={18} /> ELIMINAR PRODUCTO
             </button>
+
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <button 
+                type="button" 
+                className={styles.cancelBtn} 
+                onClick={() => router.push('/admin/products')}
+                style={{ 
+                  height: '50px', 
+                  minWidth: '150px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em'
+                }}
+              >
+                CANCELAR
+              </button>
+              <button 
+                type="submit" 
+                className={styles.approveBtn} 
+                disabled={loading}
+                style={{ 
+                  height: '50px', 
+                  minWidth: '300px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em'
+                }}
+              >
+                {loading ? (
+                  <><Loader2 className="spin" size={20} /> GUARDANDO...</>
+                ) : (
+                  <><Save size={18} /> GUARDAR CAMBIOS ELITE</>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>

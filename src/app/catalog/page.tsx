@@ -9,6 +9,7 @@ import { seedProducts } from '@/lib/seed';
 import { useCart } from '@/context/CartContext';
 import AddToListButton from '@/components/catalog/AddToListButton';
 import StatusModal, { ModalType } from '@/components/common/StatusModal';
+import ProductCard from '@/components/catalog/ProductCard';
 import styles from './Catalog.module.css';
 
 export default function CatalogPage() {
@@ -150,63 +151,7 @@ export default function CatalogPage() {
       ) : (
         <div className={styles.grid}>
           {filteredProducts.map(product => (
-            <div key={product.id} className={styles.card}>
-              <Link href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-                <div className={styles.imageContainer}>
-                  {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} className={styles.productImage} />
-                  ) : (
-                    <div className={styles.imagePlaceholder}></div>
-                  )}
-                  <span className={styles.categoryBadge}>{product.category}</span>
-                  {getEffectivePrice(product) < product.price && (
-                    <span style={{ 
-                      position: 'absolute', 
-                      top: '12px', 
-                      left: '12px', 
-                      background: 'var(--status-error)', 
-                      color: 'white', 
-                      padding: '4px 10px', 
-                      fontSize: '0.7rem', 
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em'
-                    }}>
-                      Sale
-                    </span>
-                  )}
-                  <div className={styles.imageOverlay}>
-                    <Eye size={24} />
-                    <span>Ver Detalles Elite</span>
-                  </div>
-                </div>
-              </Link>
-              <div className={styles.content}>
-                 <Link href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <h3 style={{ cursor: 'pointer' }}>{product.name}</h3>
-                 </Link>
-                 <div className={styles.rating}>
-                   {[...Array(5)].map((_, i) => (
-                     <Star 
-                       key={i} 
-                       size={14} 
-                       fill={i < Math.floor(product.rating) ? "var(--brand-accent)" : "transparent"} 
-                       color="var(--brand-accent)" 
-                     />
-                   ))}
-                   <span>({product.rating})</span>
-                 </div>
-                 <div className={styles.footer}>
-                   <span className={styles.price}>₡{product.price.toLocaleString()}</span>
-                   <div style={{ display: 'flex', gap: '8px' }}>
-                     <AddToListButton productId={product.id} className={styles.addBtn} />
-                     <button className={styles.addBtn} onClick={() => addToCart(product)}>
-                       <ShoppingCart size={18} />
-                     </button>
-                   </div>
-                 </div>
-              </div>
-            </div>
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       )}
