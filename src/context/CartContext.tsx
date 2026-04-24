@@ -16,6 +16,7 @@ interface CartContextType {
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  clearMerchantItems: (merchantId: string) => void;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   cartTotal: number;
@@ -123,25 +124,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCart([]);
   };
 
+  const clearMerchantItems = (merchantId: string) => {
+    setCart(prevCart => prevCart.filter(item => {
+      const mId = item.merchantId || 'go-shopping-main';
+      return mId !== merchantId;
+    }));
+  };
+
   const cartTotal = cart.reduce((total, item) => total + (getEffectivePrice(item) * item.quantity), 0);
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   return (
-    <ThemeTransitionWrapper>
-      <CartContext.Provider value={{ 
-        cart, 
-        addToCart, 
-        removeFromCart, 
-        updateQuantity, 
-        clearCart, 
-        isCartOpen, 
-        setIsCartOpen,
-        cartTotal,
-        cartCount
-      }}>
-        {children}
-      </CartContext.Provider>
-    </ThemeTransitionWrapper>
+    <CartContext.Provider value={{ 
+      cart, 
+      addToCart, 
+      removeFromCart, 
+      updateQuantity, 
+      clearCart, 
+      clearMerchantItems,
+      isCartOpen, 
+      setIsCartOpen,
+      cartTotal,
+      cartCount
+    }}>
+      {children}
+    </CartContext.Provider>
   );
 }
 

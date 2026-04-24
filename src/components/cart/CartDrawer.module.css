@@ -2,30 +2,23 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
-  z-index: 2000;
+  z-index: 1000;
   display: flex;
   justify-content: flex-end;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .drawer {
   width: 100%;
   max-width: 450px;
-  background: var(--bg-primary);
   height: 100%;
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
-  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   border-left: 1px solid var(--border);
 }
 
@@ -43,60 +36,86 @@
 }
 
 .header h2 {
-  font-size: 1.5rem;
-  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
 }
 
 .closeBtn {
-  color: var(--text-secondary);
-  transition: var(--transition);
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
 .closeBtn:hover {
-  color: var(--text-primary);
-  transform: rotate(90deg);
+  color: #fff;
 }
 
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 0;
 }
 
-.empty {
-  height: 100%;
+.itemsWrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  gap: 16px;
 }
 
-.continueBtn {
-  margin-top: 12px;
-  color: var(--brand-primary);
+.multiMerchantWarning {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  margin: 16px;
+  padding: 12px 16px;
+  display: flex;
+  gap: 12px;
+  color: var(--brand-accent);
+}
+
+.multiMerchantWarning p {
+  font-size: 0.75rem;
   font-weight: 600;
-  text-decoration: underline;
+  line-height: 1.4;
+  margin: 0;
 }
 
-.items {
+.merchantGroup {
+  margin-bottom: 8px;
+}
+
+.merchantHeader {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 24px;
   display: flex;
-  flex-direction: column;
-  gap: 24px;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: var(--brand-accent);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.groupItems {
+  padding: 0 16px;
 }
 
 .item {
   display: flex;
-  gap: 16px;
+  gap: 20px;
+  padding: 20px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .itemImage {
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  width: 90px;
+  height: 90px;
   background: var(--bg-tertiary);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .itemImage img {
@@ -105,34 +124,34 @@
   object-fit: cover;
 }
 
-.placeholder {
-  width: 100%;
-  height: 100%;
-  background: var(--bg-tertiary);
-}
-
 .itemInfo {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
 }
 
 .itemHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
 }
 
 .itemHeader h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  max-width: 200px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
 }
 
 .removeBtn {
+  background: transparent;
+  border: none;
   color: var(--text-tertiary);
-  transition: var(--transition);
+  cursor: pointer;
+  padding: 4px;
+  transition: all 0.2s;
 }
 
 .removeBtn:hover {
@@ -140,92 +159,117 @@
 }
 
 .itemPrice {
-  color: var(--text-secondary);
+  font-weight: 600;
   font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 
 .itemFooter {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: auto;
+  margin-top: 12px;
 }
 
 .quantityControls {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--bg-tertiary);
-  padding: 4px 8px;
-  border-radius: 0;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .quantityControls button {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: #fff;
+  padding: 6px 10px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 4px;
-  transition: all 0.2s;
-}
-
-.quantityControls button:hover {
-  color: var(--brand-accent);
-  background: rgba(212, 175, 55, 0.1);
 }
 
 .quantityControls span {
+  padding: 0 12px;
   font-size: 0.9rem;
   font-weight: 600;
-  min-width: 24px;
-  text-align: center;
-  color: var(--text-primary);
 }
 
 .subtotal {
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+  text-align: center;
+  color: var(--text-tertiary);
+  gap: 20px;
+}
+
+.continueBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: #fff;
+  padding: 12px 24px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .footer {
-  padding: 32px 24px;
+  padding: 24px;
   border-top: 1px solid var(--border);
-  background: var(--bg-secondary);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .totalRow {
   display: flex;
   justify-content: space-between;
-  font-size: 1.25rem;
-  font-weight: 700;
+  align-items: center;
   margin-bottom: 8px;
 }
 
+.totalRow span:first-child {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.totalPrice {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--brand-accent);
+}
+
 .shippingInfo {
+  font-size: 0.75rem;
   color: var(--text-tertiary);
-  font-size: 0.85rem;
   margin-bottom: 24px;
 }
 
 .checkoutBtn {
   width: 100%;
-  padding: 16px;
-  background: var(--brand-primary);
-  color: var(--bg-primary);
-  border-radius: 0;
-  font-weight: 700;
+  background: var(--brand-accent);
+  color: #000;
+  text-decoration: none;
+  padding: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  transition: var(--transition);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
 }
 
 .checkoutBtn:hover {
-  background: var(--brand-accent);
+  background: #fff;
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
 }

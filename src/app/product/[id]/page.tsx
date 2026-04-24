@@ -66,9 +66,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div className={styles.page}>
       <div className="container animate">
-        <Link href="/catalog" className={styles.backBtn}>
-          <ArrowLeft size={18} /> Volver al Catálogo de Excelencia
-        </Link>
+        <div className={styles.backBtnContainer}>
+          <Link href="/catalog" className={styles.backBtn}>
+            <ArrowLeft size={18} /> Volver al Catálogo de Excelencia
+          </Link>
+        </div>
 
         <div className={styles.container}>
           {/* Gallery Section */}
@@ -99,7 +101,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Info Section */}
           <div className={styles.infoSection}>
-            <div className={styles.category}>{product.category}</div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div className={styles.category}>{product.category}</div>
+              {!merchant && (
+                <div className={styles.exclusiveBadge}>
+                  <ShieldCheck size={14} /> Producto Exclusivo de GoShopping
+                </div>
+              )}
+            </div>
+            
             <h1 className={styles.title}>{product.name}</h1>
             
             <div className={styles.rating}>
@@ -199,6 +209,33 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </div>
+
+        {/* Trust Section before footer */}
+        <section className={styles.trustSection}>
+          <div className={styles.features}>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <Zap size={32} />
+              </div>
+              <h3>Entrega Inmediata</h3>
+              <p>Logística de vanguardia garantizando envíos el mismo día.</p>
+            </div>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <ShieldCheck size={32} />
+              </div>
+              <h3>Garantía de Autenticidad</h3>
+              <p>Cada pieza es verificada por especialistas.</p>
+            </div>
+            <div className={styles.featureItem}>
+              <div className={styles.featureIcon}>
+                <Star size={32} />
+              </div>
+              <h3>Soporte Executive</h3>
+              <p>Atención personalizada para una experiencia elite.</p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

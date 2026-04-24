@@ -34,6 +34,10 @@ export interface MerchantProfile {
     paypalEmail?: string;
     sinpeNumber?: string;
     sinpeOwner?: string;
+    paypalEnabled?: boolean;
+    paypalMode?: 'sandbox' | 'live';
+    paypalSandboxClientId?: string;
+    paypalLiveClientId?: string;
   };
   
   // Legal and Physical Data

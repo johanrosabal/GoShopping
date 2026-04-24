@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  padding-bottom: 100px;
+  padding-bottom: 20px; /* Reduced from 100px */
 }
 
 .container {
@@ -8,7 +8,7 @@
   grid-template-columns: 1.2fr 1fr;
   gap: 80px;
   align-items: start;
-  margin-top: 60px;
+  margin-top: 30px; /* Reduced from 60px */
 }
 
 .imageSection {
@@ -187,12 +187,73 @@
   color: var(--text-tertiary);
   text-decoration: none;
   font-size: 0.9rem;
-  margin-bottom: 40px;
-  transition: color 0.2s;
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  transition: all 0.3s;
 }
 
 .backBtn:hover {
   color: var(--brand-accent);
+  border-color: var(--brand-accent);
+  background: rgba(212, 175, 55, 0.05);
+}
+
+.backBtnContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.exclusiveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid var(--brand-accent);
+  color: var(--brand-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+
+/* Trust Section */
+.trustSection {
+  margin-top: 60px;
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.featureItem {
+  text-align: center;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+}
+
+.featureIcon {
+  color: var(--brand-accent);
+  margin-bottom: 16px;
+}
+
+.featureItem h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.featureItem p {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
 }
 
 @media (max-width: 1024px) {

@@ -21,7 +21,9 @@ import {
   Trash2,
   X,
   ArrowLeft,
-  Clock
+  Clock,
+  Activity,
+  ShieldCheck
 } from 'lucide-react';
 import Image from 'next/image';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -389,7 +391,7 @@ export default function MerchantSettingsPage() {
               <input 
                 type="text" 
                 className={styles.filterInput}
-                value={merchant?.paymentConfig.sinpeNumber}
+                value={merchant?.paymentConfig?.sinpeNumber || ''}
                 onChange={(e) => updateField('paymentConfig', 'sinpeNumber', e.target.value)}
                 placeholder="8888 7777"
               />
@@ -399,21 +401,137 @@ export default function MerchantSettingsPage() {
               <input 
                 type="text" 
                 className={styles.filterInput}
-                value={merchant?.paymentConfig.sinpeOwner}
+                value={merchant?.paymentConfig?.sinpeOwner || ''}
                 onChange={(e) => updateField('paymentConfig', 'sinpeOwner', e.target.value)}
                 placeholder="Nombre Completo"
               />
             </div>
-            <div className={styles.filterGroup} style={{ gridColumn: 'span 2' }}>
-              <label><Globe size={14} style={{ marginRight: '6px' }} /> Correo PayPal Business</label>
-              <input 
-                type="email" 
-                className={styles.filterInput}
-                value={merchant?.paymentConfig.paypalEmail}
-                onChange={(e) => updateField('paymentConfig', 'paypalEmail', e.target.value)}
-                placeholder="tusventas@paypal.com"
-              />
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Tus clientes te pagarán directamente a estas cuentas.</span>
+
+            <div className={styles.filterGroup} style={{ gridColumn: 'span 2', marginTop: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Globe size={20} color="var(--brand-accent)" />
+                  <h3 style={{ textTransform: 'uppercase', fontSize: '0.9rem', letterSpacing: '0.1em', margin: 0 }}>Pasarela de Pagos Elite (PayPal)</h3>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '0.75rem', color: merchant?.paymentConfig?.paypalEnabled ? 'var(--status-success)' : 'var(--text-tertiary)', fontWeight: 700 }}>
+                    {merchant?.paymentConfig?.paypalEnabled ? 'ACTIVO' : 'DESACTIVADO'}
+                  </span>
+                  <div className={styles.switchWrapper}>
+                    <input 
+                      type="checkbox" 
+                      id="paypal-enabled"
+                      className={styles.switchInput}
+                      checked={merchant?.paymentConfig?.paypalEnabled || false}
+                      onChange={(e) => updateField('paymentConfig', 'paypalEnabled', e.target.checked)}
+                    />
+                    <label htmlFor="paypal-enabled" className={styles.switchLabel}></label>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ 
+                display: 'grid', 
+                gap: '24px', 
+                opacity: merchant?.paymentConfig?.paypalEnabled ? 1 : 0.5, 
+                pointerEvents: merchant?.paymentConfig?.paypalEnabled ? 'all' : 'none', 
+                transition: 'opacity 0.3s ease' 
+              }}>
+                <div className={styles.filterGroup}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Activity size={14} /> Ambiente de Ejecución
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                    <button 
+                      type="button"
+                      onClick={() => updateField('paymentConfig', 'paypalMode', 'sandbox')}
+                      style={{ 
+                        flex: 1, 
+                        padding: '12px', 
+                        borderRadius: '8px',
+                        border: '1px solid',
+                        cursor: 'pointer',
+                        background: merchant?.paymentConfig?.paypalMode === 'sandbox' ? 'rgba(197, 160, 89, 0.1)' : 'var(--bg-secondary)',
+                        borderColor: merchant?.paymentConfig?.paypalMode === 'sandbox' ? 'var(--brand-accent)' : 'var(--border)',
+                        color: merchant?.paymentConfig?.paypalMode === 'sandbox' ? 'var(--brand-accent)' : 'var(--text-secondary)',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <ShieldCheck size={16} /> Sandbox (Pruebas)
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => updateField('paymentConfig', 'paypalMode', 'live')}
+                      style={{ 
+                        flex: 1, 
+                        padding: '12px', 
+                        borderRadius: '8px',
+                        border: '1px solid',
+                        cursor: 'pointer',
+                        background: merchant?.paymentConfig?.paypalMode === 'live' ? 'rgba(255, 68, 68, 0.1)' : 'var(--bg-secondary)',
+                        borderColor: merchant?.paymentConfig?.paypalMode === 'live' ? '#ff4444' : 'var(--border)',
+                        color: merchant?.paymentConfig?.paypalMode === 'live' ? '#ff4444' : 'var(--text-secondary)',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <Globe size={16} /> Producción (Real)
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: '8px' }}>
+                    {merchant?.paymentConfig?.paypalMode === 'sandbox' 
+                      ? '⚠️ Estás en modo de pruebas. Los pagos no serán reales.' 
+                      : '🔴 ATENCIÓN: Estás en modo PRODUCCIÓN. Se procesarán transacciones reales.'}
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div className={styles.filterGroup}>
+                    <label>PayPal Client ID (Sandbox)</label>
+                    <input 
+                      type="text" 
+                      className={styles.filterInput}
+                      value={merchant?.paymentConfig?.paypalSandboxClientId || ''}
+                      onChange={(e) => updateField('paymentConfig', 'paypalSandboxClientId', e.target.value)}
+                      placeholder="Introducir Client ID de Sandbox..."
+                    />
+                  </div>
+
+                  <div className={styles.filterGroup}>
+                    <label>PayPal Client ID (Producción)</label>
+                    <input 
+                      type="text" 
+                      className={styles.filterInput}
+                      value={merchant?.paymentConfig?.paypalLiveClientId || ''}
+                      onChange={(e) => updateField('paymentConfig', 'paypalLiveClientId', e.target.value)}
+                      placeholder="Introducir Client ID de Producción..."
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.filterGroup}>
+                  <label>Correo PayPal Business</label>
+                  <input 
+                    type="email" 
+                    className={styles.filterInput}
+                    value={merchant?.paymentConfig?.paypalEmail || ''}
+                    onChange={(e) => updateField('paymentConfig', 'paypalEmail', e.target.value)}
+                    placeholder="tusventas@paypal.com"
+                  />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: '4px', display: 'block' }}>
+                    Tus clientes te pagarán directamente a esta cuenta. Asegúrate de que los Client IDs coincidan con esta cuenta.
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>

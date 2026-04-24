@@ -4,7 +4,9 @@ import { getSiteSettings, SiteSettings, DEFAULT_SETTINGS } from '@/lib/services/
 import { useEffect, useState } from 'react';
 import styles from './SinpePayment.module.css';
 
-export default function SinpePayment({ onFileSelect }: { onFileSelect?: (file: File) => void }) {
+import { getMerchantById, MerchantProfile } from '@/lib/services/merchants';
+
+export default function SinpePayment({ onFileSelect, merchant }: { onFileSelect?: (file: File) => void, merchant?: MerchantProfile | null }) {
   const [file, setFile] = useState<File | null>(null);
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [copied, setCopied] = useState(false);
@@ -14,11 +16,16 @@ export default function SinpePayment({ onFileSelect }: { onFileSelect?: (file: F
       const data = await getSiteSettings();
       setSettings(data);
     };
-    fetchSettings();
-  }, []);
+    if (!merchant) {
+      fetchSettings();
+    }
+  }, [merchant]);
+
+  const sinpePhone = merchant?.paymentConfig?.sinpeNumber || settings.sinpePhone;
+  const sinpeOwner = merchant?.paymentConfig?.sinpeOwner || settings.sinpeOwner;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(settings.sinpePhone);
+    navigator.clipboard.writeText(sinpePhone);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -36,7 +43,7 @@ export default function SinpePayment({ onFileSelect }: { onFileSelect?: (file: F
       <div className={styles.instruction}>
         <Info size={20} />
         <div style={{ flex: 1 }}>
-          <p>Realiza la transferencia al número <strong>{settings.sinpePhone}</strong> a nombre de <strong>{settings.sinpeOwner}</strong></p>
+          <p>Realiza la transferencia al número <strong>{sinpePhone}</strong> a nombre de <strong>{sinpeOwner}</strong></p>
         </div>
         <button 
           onClick={handleCopy}

@@ -5,13 +5,16 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { getSiteSettings, SiteSettings, DEFAULT_SETTINGS } from '@/lib/services/settings';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
+import { MerchantProfile } from '@/lib/services/merchants';
+
 interface PayPalPaymentProps {
   amount: number; // In CRC
   onSuccess: (details: any) => void;
   onError: (error: any) => void;
+  merchant?: MerchantProfile | null;
 }
 
-export default function PayPalPayment({ amount, onSuccess, onError }: PayPalPaymentProps) {
+export default function PayPalPayment({ amount, onSuccess, onError, merchant }: PayPalPaymentProps) {
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
 
@@ -21,8 +24,13 @@ export default function PayPalPayment({ amount, onSuccess, onError }: PayPalPaym
       setSettings(data);
       setLoading(false);
     };
-    fetchSettings();
-  }, []);
+    if (merchant) {
+      // We still need settings for exchange rate, but we'll use merchant for PayPal IDs
+      fetchSettings();
+    } else {
+      fetchSettings();
+    }
+  }, [merchant]);
 
   if (loading) {
     return (
@@ -33,7 +41,12 @@ export default function PayPalPayment({ amount, onSuccess, onError }: PayPalPaym
     );
   }
 
-  if (!settings.paypalEnabled || (!settings.paypalSandboxClientId && !settings.paypalLiveClientId)) {
+  const paypalEnabled = merchant ? merchant.paymentConfig?.paypalEnabled : settings.paypalEnabled;
+  const paypalMode = merchant ? merchant.paymentConfig?.paypalMode : settings.paypalMode;
+  const sandboxId = merchant ? merchant.paymentConfig?.paypalSandboxClientId : settings.paypalSandboxClientId;
+  const liveId = merchant ? merchant.paymentConfig?.paypalLiveClientId : settings.paypalLiveClientId;
+
+  if (!paypalEnabled || (!sandboxId && !liveId)) {
     return (
       <div style={{ 
         padding: '20px', 
@@ -46,14 +59,16 @@ export default function PayPalPayment({ amount, onSuccess, onError }: PayPalPaym
         gap: '12px'
       }}>
         <AlertTriangle size={20} />
-        <p style={{ fontSize: '0.85rem' }}>PayPal no está configurado correctamente en los ajustes globales.</p>
+        <p style={{ fontSize: '0.85rem' }}>
+          {merchant 
+            ? 'PayPal no está configurado correctamente para este comercio.' 
+            : 'PayPal no está configurado correctamente en los ajustes globales.'}
+        </p>
       </div>
     );
   }
 
-  const clientId = settings.paypalMode === 'sandbox' 
-    ? settings.paypalSandboxClientId 
-    : settings.paypalLiveClientId;
+  const clientId = paypalMode === 'sandbox' ? sandboxId : liveId;
 
   // Convert CRC to USD
   const amountInUSD = (amount / settings.usdExchangeRate).toFixed(2);
@@ -78,7 +93,7 @@ export default function PayPalPayment({ amount, onSuccess, onError }: PayPalPaym
               intent: 'CAPTURE',
               purchase_units: [
                 {
-                  description: "Compra en Go-Shopping Elite",
+                  description: merchant ? `Compra en ${merchant.name}` : "Compra en Go-Shopping Elite",
                   amount: {
                     currency_code: 'USD',
                     value: amountInUSD,
@@ -110,7 +125,7 @@ export default function PayPalPayment({ amount, onSuccess, onError }: PayPalPaym
         gap: '8px'
       }}>
         <span>Tasa de cambio aplicada: 1 USD = ₡{settings.usdExchangeRate}</span>
-        {settings.paypalMode === 'sandbox' && (
+        {paypalMode === 'sandbox' && (
           <span style={{ 
             background: 'var(--status-warning)', 
             color: 'black', 

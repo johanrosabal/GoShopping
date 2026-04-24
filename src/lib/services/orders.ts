@@ -28,8 +28,16 @@ const ORDERS_COLLECTION = 'orders';
 
 export const createOrder = async (orderData: OrderData, voucherFile?: File) => {
   try {
-    // Generate a 6-digit random order number
-    const orderNumber = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate invoice number in format YYMMDDXXXXX
+    const now = new Date();
+    const yy = now.getFullYear().toString().slice(-2);
+    const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+    const dd = now.getDate().toString().padStart(2, '0');
+    const dateStr = `${yy}${mm}${dd}`;
+    
+    // For the consecutive part, we'll use a random 5-digit for now (ensuring it's numeric)
+    const randomSuffix = Math.floor(10000 + Math.random() * 90000).toString();
+    const orderNumber = `${dateStr}${randomSuffix}`;
 
     let finalOrderData = {
       ...orderData,
@@ -70,7 +78,7 @@ export const createOrder = async (orderData: OrderData, voucherFile?: File) => {
       });
     }
 
-    return orderId;
+    return { orderId, orderNumber };
   } catch (error) {
     console.error("Error creating order:", error);
     throw error;

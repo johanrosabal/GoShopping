@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector';
 import SinpePayment from '@/components/checkout/SinpePayment';
 import PayPalPayment from '@/components/checkout/PayPalPayment';
@@ -9,19 +9,43 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { createOrder, OrderData } from '@/lib/services/orders';
 import { getEffectivePrice } from '@/lib/services/products';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { getMerchantById, MerchantProfile } from '@/lib/services/merchants';
+import { Loader2, CheckCircle, Store, Clock, Check, ArrowRight, FileText, Download } from 'lucide-react';
 import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import styles from './Checkout.module.css';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
-export default function CheckoutPage() {
-  const { cart, cartTotal, clearCart } = useCart();
+interface CheckoutSessionItem {
+  merchantId: string;
+  merchantName: string;
+  status: 'idle' | 'pending' | 'success';
+}
+
+function CheckoutContent() {
+  const { cart, cartTotal, clearCart, clearMerchantItems } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const merchantIdParam = searchParams.get('merchantId');
   
   const [method, setMethod] = useState<'paypal' | 'sinpe' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [lastPaymentStatus, setLastPaymentStatus] = useState<'pending' | 'success' | null>(null);
+  const [lastOrderNumber, setLastOrderNumber] = useState<string>('');
   const [voucherFile, setVoucherFile] = useState<File | null>(null);
+  const [merchant, setMerchant] = useState<MerchantProfile | null>(null);
+  const [loadingMerchant, setLoadingMerchant] = useState(!!merchantIdParam);
+  
+  // Last order capture for success screen
+  const [lastOrderItems, setLastOrderItems] = useState<any[]>([]);
+  const [lastOrderTotal, setLastOrderTotal] = useState<number>(0);
+  const [lastOrderMerchantName, setLastOrderMerchantName] = useState<string>('');
+  
+  // Multi-merchant session tracking
+  const [sessionSteps, setSessionSteps] = useState<CheckoutSessionItem[]>([]);
+  
   const [modal, setModal] = useState<{
     isOpen: boolean;
     type: ModalType;
@@ -35,38 +59,131 @@ export default function CheckoutPage() {
     message: '' 
   });
 
+  // 1. Initialize session steps and fetch merchant names if needed
+  useEffect(() => {
+    if (cart.length === 0) return;
+
+    const initializeSession = async () => {
+      // Get unique merchants from cart
+      const uniqueMerchantIds = Array.from(new Set(cart.map(item => item.merchantId || 'go-shopping-main')));
+      
+      const savedSession = sessionStorage.getItem('checkout_session');
+      let parsed: CheckoutSessionItem[] = [];
+      if (savedSession) {
+        parsed = JSON.parse(savedSession);
+      }
+
+      // Check if session is stale (cart has new merchants not in session)
+      const sessionMerchantIds = parsed.map(p => p.merchantId);
+      const hasNewMerchants = uniqueMerchantIds.some(id => !sessionMerchantIds.includes(id));
+      const isStale = !savedSession || hasNewMerchants;
+      
+      if (!savedSession || isStale) {
+        const merchantsWithNames = await Promise.all(uniqueMerchantIds.map(async (mId) => {
+          if (mId === 'go-shopping-main') {
+            return { merchantId: mId, merchantName: 'GoShopping Oficial', status: 'idle' as const };
+          }
+          try {
+            const mData = await getMerchantById(mId);
+            return { 
+              merchantId: mId, 
+              merchantName: mData?.name || `Socio ${mId.substring(0, 4)}`, 
+              status: 'idle' as const 
+            };
+          } catch (e) {
+            return { merchantId: mId, merchantName: 'Comercio', status: 'idle' as const };
+          }
+        }));
+        
+        setSessionSteps(merchantsWithNames);
+        sessionStorage.setItem('checkout_session', JSON.stringify(merchantsWithNames));
+      } else {
+        setSessionSteps(parsed);
+      }
+    };
+
+    initializeSession();
+  }, [cart.length]); 
+
+  // 2. Load current merchant data
+  useEffect(() => {
+    const mId = merchantIdParam || (sessionSteps.length > 0 ? sessionSteps.find(s => s.status === 'idle')?.merchantId : null);
+    
+    if (mId && mId !== 'go-shopping-main') {
+      const fetchMerchant = async () => {
+        try {
+          const data = await getMerchantById(mId);
+          setMerchant(data);
+        } catch (error) {
+          console.error("Error loading merchant:", error);
+        } finally {
+          setLoadingMerchant(false);
+        }
+      };
+      fetchMerchant();
+    } else {
+      setMerchant(null);
+      setLoadingMerchant(false);
+    }
+  }, [merchantIdParam, sessionSteps.length]);
+
+  const currentMId = merchantIdParam || (sessionSteps.length > 0 ? sessionSteps.find(s => s.status === 'idle')?.merchantId : 'go-shopping-main');
+
+  const filteredItems = cart.filter(item => (item.merchantId || 'go-shopping-main') === currentMId);
+
+  const filteredTotal = filteredItems.reduce((total, item) => 
+    total + (getEffectivePrice(item) * item.quantity), 0);
+
+  const updateSessionStatus = (status: 'pending' | 'success') => {
+    const updated = sessionSteps.map(step => 
+      step.merchantId === currentMId ? { ...step, status } : step
+    );
+    setSessionSteps(updated);
+    sessionStorage.setItem('checkout_session', JSON.stringify(updated));
+    setLastPaymentStatus(status);
+  };
+
   const handleConfirm = async () => {
     if (!method) return;
     setIsProcessing(true);
 
     try {
-      const subtotal = cartTotal / 1.13;
-      const tax = cartTotal - subtotal;
+      const subtotal = filteredTotal / 1.13;
+      const tax = filteredTotal - subtotal;
 
       const orderData: OrderData = {
         userId: user?.uid,
         customerName: user?.displayName || 'Cliente Anonimo',
         email: user?.email || '',
-        items: cart,
-        subtotal: subtotal,
-        tax: tax,
-        total: cartTotal,
+        items: filteredItems,
+        subtotal,
+        tax,
+        total: filteredTotal,
         paymentMethod: method,
         status: method === 'paypal' ? 'completed' : 'pending',
+        merchantId: currentMId || 'go-shopping-main',
+        merchantName: merchant ? merchant.name : 'GoShopping Oficial'
       };
 
-      await createOrder(orderData, voucherFile || undefined);
+      const { orderId, orderNumber } = await createOrder(orderData, voucherFile || undefined);
+      setLastOrderNumber(orderNumber);
+      setLastOrderItems([...filteredItems]);
+      setLastOrderTotal(filteredTotal);
+      setLastOrderMerchantName(merchant ? merchant.name : 'GoShopping Oficial');
+      
+      updateSessionStatus(method === 'sinpe' ? 'pending' : 'success');
       setIsSuccess(true);
-      clearCart();
-      setTimeout(() => router.push('/'), 5000);
+      
+      if (currentMId) {
+        clearMerchantItems(currentMId);
+      }
     } catch (error) {
       setModal({
         isOpen: true,
         type: 'error',
         title: 'Error de Pedido',
-        message: 'No logramos procesar tu pedido exclusivo en este momento. Por favor, verifica tu conexión o intenta de nuevo.'
+        message: 'No logramos procesar tu pedido exclusivo.'
       });
-      console.error(error);
     } finally {
       setIsProcessing(false);
     }
@@ -75,61 +192,145 @@ export default function CheckoutPage() {
   const handlePayPalSuccess = async (details: any) => {
     setIsProcessing(true);
     try {
-      const subtotal = cartTotal / 1.13;
-      const tax = cartTotal - subtotal;
+      const subtotal = filteredTotal / 1.13;
+      const tax = filteredTotal - subtotal;
 
       const orderData: OrderData = {
         userId: user?.uid,
         customerName: user?.displayName || 'Cliente Anonimo',
         email: user?.email || '',
-        items: cart,
-        subtotal: subtotal,
-        tax: tax,
-        total: cartTotal,
+        items: filteredItems,
+        subtotal,
+        tax,
+        total: filteredTotal,
         paymentMethod: 'paypal',
         status: 'completed',
         transactionId: details.id,
         payerEmail: details.payer.email_address,
-        notes: `Pago verificado - PayPal ID: ${details.id}`
+        merchantId: currentMId || 'go-shopping-main',
+        merchantName: merchant ? merchant.name : 'GoShopping Oficial'
       };
 
-      await createOrder(orderData);
+      const { orderId, orderNumber } = await createOrder(orderData);
+      setLastOrderNumber(orderNumber);
+      setLastOrderItems([...filteredItems]);
+      setLastOrderTotal(filteredTotal);
+      setLastOrderMerchantName(merchant ? merchant.name : 'GoShopping Oficial');
+
+      updateSessionStatus('success');
       setIsSuccess(true);
-      clearCart();
-      setTimeout(() => router.push('/'), 5000);
+      
+      if (currentMId) {
+        clearMerchantItems(currentMId);
+      }
     } catch (error) {
       setModal({
         isOpen: true,
         type: 'error',
         title: 'Error Procesando Pago',
-        message: 'El pago se realizó en PayPal pero no logramos registrar tu pedido. Por favor contacta a soporte con tu ID de transacción.'
+        message: 'El pago se realizó con éxito pero no pudimos registrar el pedido.'
       });
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const generatePDF = async () => {
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const invoiceElement = document.getElementById('printable-invoice');
+    if (!invoiceElement) return;
+
+    const canvas = await html2canvas(invoiceElement, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#000000'
+    });
+    
+    const imgData = canvas.toDataURL('image/png');
+    const imgProps = doc.getImageProperties(imgData);
+    const pdfWidth = doc.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    
+    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    doc.save(`Factura_GoShopping_${lastOrderNumber}.pdf`);
+  };
+
+  const nextMerchant = sessionSteps.find(s => s.status === 'idle');
+
   if (isSuccess) {
     return (
       <div className={styles.successContainer}>
-        <CheckCircle size={80} color="var(--brand-accent)" />
-        <h1>¡Pedido Recibido!</h1>
-        <p>Gracias por tu compra exclusiva. Si pagaste por SINPE, revisaremos tu comprobante pronto.</p>
-        <button onClick={() => router.push('/')} className={styles.confirmBtn}>
-          Volver a la tienda
-        </button>
-      </div>
-    );
-  }
+        <div id="printable-invoice" style={{ 
+          padding: '40px', 
+          background: '#000', 
+          color: '#fff', 
+          width: '500px', 
+          border: '2px solid #d4af37',
+          textAlign: 'left',
+          marginBottom: '20px'
+        }}>
+          <div style={{ borderBottom: '2px solid #d4af37', paddingBottom: '20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={{ margin: 0, color: '#d4af37' }}>GO-SHOPPING ELITE</h2>
+              <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>Recibo Digital de Compra</p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: 0, fontWeight: 900 }}>Factura #{lastOrderNumber}</p>
+              <p style={{ margin: 0, fontSize: '0.7rem' }}>Fecha: {new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
 
-  if (cart.length === 0) {
-    return (
-      <div className={styles.emptyCheckout}>
-        <h2>Tu carrito está vacío</h2>
-        <p>Añade algunos productos de excelencia antes de finalizar.</p>
-        <button onClick={() => router.push('/catalog')} className={styles.confirmBtn}>
-          Ver Catálogo
-        </button>
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ margin: '0 0 5px 0', fontSize: '0.7rem', textTransform: 'uppercase', color: '#d4af37' }}>Comercio</p>
+            <p style={{ margin: 0, fontWeight: 700 }}>{lastOrderMerchantName}</p>
+            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.8 }}>Email: {merchant?.email || 'soporte@goshopping.com'}</p>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.7rem', textTransform: 'uppercase', color: '#d4af37' }}>Artículos</p>
+            {lastOrderItems.map(item => (
+              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
+                <span>{item.name} x{item.quantity}</span>
+                <span>₡{(getEffectivePrice(item) * item.quantity).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ borderTop: '1px solid #333', paddingTop: '15px', textAlign: 'right' }}>
+            <p style={{ margin: '0 0 5px 0', fontSize: '1.2rem', fontWeight: 900 }}>Total: ₡{lastOrderTotal.toLocaleString()}</p>
+            <p style={{ margin: 0, fontSize: '0.7rem', color: lastPaymentStatus === 'success' ? '#44ff44' : '#ffcc00' }}>
+              Estado: {lastPaymentStatus === 'success' ? 'PAGO CONFIRMADO' : 'PENDIENTE DE VALIDACIÓN (SINPE)'}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button onClick={generatePDF} className={styles.confirmBtn} style={{ background: '#fff', color: '#000' }}>
+            <Download size={20} /> Descargar Factura PDF
+          </button>
+          
+          {nextMerchant ? (
+            <button 
+              onClick={() => {
+                setIsSuccess(false);
+                router.push(`/checkout?merchantId=${nextMerchant.merchantId}`);
+              }} 
+              className={styles.confirmBtn}
+            >
+              Pagar siguiente comercio <ArrowRight size={20} />
+            </button>
+          ) : (
+            <button 
+              onClick={() => {
+                sessionStorage.removeItem('checkout_session');
+                router.push('/');
+              }} 
+              className={styles.confirmBtn}
+            >
+              Completar todo el proceso
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -137,40 +338,67 @@ export default function CheckoutPage() {
   return (
     <div className={`${styles.checkout} container`}>
       <header className={styles.header}>
-        <h1>Finalizar <span className={styles.accent}>Pedido</span></h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+          <h1>Finalizar <span className={styles.accent}>Pedido</span></h1>
+          
+          {sessionSteps.length > 0 && (
+            <div className={styles.stepper}>
+              {sessionSteps.map((step, idx) => (
+                <div key={step.merchantId} className={styles.stepContainer}>
+                  <div className={`${styles.step} ${step.merchantId === currentMId ? styles.active : ''} ${styles[step.status]}`}>
+                    <div className={styles.stepIcon}>
+                      {step.status === 'success' ? <Check size={18} /> : 
+                       step.status === 'pending' ? <Clock size={18} /> : 
+                       (idx + 1)}
+                    </div>
+                    <span className={styles.stepLabel}>{step.merchantName}</span>
+                  </div>
+                  <div className={`${styles.stepLine} ${step.status !== 'idle' || (idx < sessionSteps.length && sessionSteps[idx+1]?.merchantId === currentMId) ? styles.active : ''}`} />
+                </div>
+              ))}
+              <div className={styles.step}>
+                <div className={styles.stepIcon} style={{ opacity: 0.5 }}>
+                  <FileText size={18} />
+                </div>
+                <span className={styles.stepLabel}>Confirmación</span>
+              </div>
+            </div>
+          )}
+        </div>
       </header>
       
       <div className={styles.layout}>
         <div className={styles.main}>
           <section className={styles.section}>
-            <h2>1. Método de Pago</h2>
+            <h2>1. Método de Pago - <span className={styles.accent}>{merchant?.name || 'GoShopping'}</span></h2>
             <PaymentMethodSelector onSelect={setMethod} />
           </section>
 
           {method === 'sinpe' && (
             <section className={styles.section}>
-              <h2>2. Detalles de SINPE Móvil</h2>
-              <SinpePayment onFileSelect={setVoucherFile} />
+              <h2>2. Detalles de SINPE Móvil - <span className={styles.accent}>{merchant?.name || 'GoShopping'}</span></h2>
+              <SinpePayment onFileSelect={setVoucherFile} merchant={merchant} />
             </section>
           )}
 
           {method === 'paypal' && (
             <section className={styles.section}>
-              <h2>2. PayPal Checkout</h2>
+              <h2>2. PayPal Checkout - <span className={styles.accent}>{merchant?.name || 'GoShopping'}</span></h2>
               <PayPalPayment 
-                amount={cartTotal} 
+                amount={filteredTotal} 
                 onSuccess={handlePayPalSuccess}
+                merchant={merchant}
                 onError={(err) => setModal({
                   isOpen: true,
                   type: 'error',
                   title: 'Error de PayPal',
-                  message: 'Hubo un problema con la pasarela de PayPal. Intenta de nuevo o elige otro método.'
+                  message: 'Problema de conexión. Reintenta.'
                 })}
               />
             </section>
           )}
 
-          <div className={styles.actions} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className={styles.actions}>
             {method !== 'paypal' && (
               <button 
                 className={styles.confirmBtn} 
@@ -178,17 +406,8 @@ export default function CheckoutPage() {
                 onClick={handleConfirm}
               >
                 {isProcessing ? <Loader2 className="spin" /> : (
-                  method === 'sinpe' ? 'Subir Comprobante y Finalizar' : 'Confirmar Pedido'
+                  method === 'sinpe' ? 'Confirmar Pago SINPE' : 'Procesar Pedido'
                 )}
-              </button>
-            )}
-            {!isProcessing && (
-              <button 
-                type="button"
-                className={styles.cancelBtn}
-                onClick={() => router.push('/catalog')}
-              >
-                Cancelar y seguir comprando
               </button>
             )}
           </div>
@@ -196,34 +415,19 @@ export default function CheckoutPage() {
 
         <div className={styles.sidebar}>
           <div className={styles.summary}>
-            <h3>Resumen del Pedido</h3>
+            <h3>Resumen de {merchant?.name || 'GoShopping'}</h3>
             <div className={styles.itemList}>
-              {cart.map(item => (
+              {filteredItems.map(item => (
                 <div key={item.id} className={styles.itemRow}>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span>{item.name} x{item.quantity}</span>
-                    {getEffectivePrice(item) < item.price && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textDecoration: 'line-through' }}>
-                        Base: ₡{item.price.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
+                  <span>{item.name} x{item.quantity}</span>
                   <span>₡{(getEffectivePrice(item) * item.quantity).toLocaleString()}</span>
                 </div>
               ))}
             </div>
             <hr className={styles.divider} />
-            <div className={styles.row}>
-              <span>Subtotal</span>
-              <span>₡{cartTotal.toLocaleString()}</span>
-            </div>
-            <div className={styles.row}>
-              <span>Envío</span>
-              <span>Gratis</span>
-            </div>
             <div className={`${styles.row} ${styles.total}`}>
-              <span>Total</span>
-              <span>₡{cartTotal.toLocaleString()}</span>
+              <span>Total Parcial</span>
+              <span>₡{filteredTotal.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -237,5 +441,13 @@ export default function CheckoutPage() {
         onClose={() => setModal({ ...modal, isOpen: false })}
       />
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="container" style={{ padding: '100px', textAlign: 'center' }}><Loader2 className="spin" size={40} color="var(--brand-accent)" /></div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
