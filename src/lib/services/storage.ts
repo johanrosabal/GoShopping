@@ -30,3 +30,12 @@ export const deleteFile = async (urlOrPath: string): Promise<boolean> => {
     return false;
   }
 };
+/**
+ * Uploads an image for a chat session
+ */
+export const uploadChatImage = async (file: File, chatId: string): Promise<string> => {
+  const extension = file.name.split('.').pop();
+  const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+  const path = `chats/${chatId}/${fileName}`;
+  return uploadFile(path, file);
+};

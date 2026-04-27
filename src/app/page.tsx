@@ -3,6 +3,7 @@ import { getProducts } from "@/lib/services/products";
 import { getCategories } from "@/lib/services/categories";
 import { getSiteSettings } from "@/lib/services/settings";
 import ProductCard from "@/components/catalog/ProductCard";
+import HomeContent from "@/components/home/HomeContent";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -33,132 +34,134 @@ export default async function Home() {
   const highlightedWord = titleParts[titleParts.length - 1];
 
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        
-        {/* Cinematic Hero Section */}
-        <section className={styles.hero}>
-          <div className={styles.heroBackground}>
-            <img 
-              src={settings.heroBackgroundImageUrl} 
-              alt="Elite Luxury Background" 
-              className={styles.heroImage}
-            />
-            <div className={styles.heroOverlay}></div>
-          </div>
+    <HomeContent>
+      <div className={styles.page}>
+        <main className={styles.main}>
           
-          <div className="container" style={{ position: 'relative', zIndex: 10 }}>
-            <div className={styles.heroContent}>
-              <div className="animate">
-                <span className={styles.badge}>{settings.heroBadge}</span>
-                <h1 className={styles.heroTitle}>
-                  {mainTitle} <span className={styles.textHighlight}>{highlightedWord}</span>
-                </h1>
-                <p className={styles.heroDesc}>
-                  {settings.heroDescription}
-                </p>
-                <div className={styles.heroActions}>
-                  <Link href="/catalog" className={styles.btnPrimary}>
-                    Explorar Catálogo
-                  </Link>
-                  <Link href="/about" className={styles.btnSecondary}>
-                    Nuestra Filosofía
-                  </Link>
+          {/* Cinematic Hero Section */}
+          <section className={styles.hero}>
+            <div className={styles.heroBackground}>
+              <img 
+                src={settings.heroBackgroundImageUrl} 
+                alt="Elite Luxury Background" 
+                className={styles.heroImage}
+              />
+              <div className={styles.heroOverlay}></div>
+            </div>
+            
+            <div className="container" style={{ position: 'relative', zIndex: 10 }}>
+              <div className={styles.heroContent}>
+                <div className="animate">
+                  <span className={styles.badge}>{settings.heroBadge}</span>
+                  <h1 className={styles.heroTitle}>
+                    {mainTitle} <span className={styles.textHighlight}>{highlightedWord}</span>
+                  </h1>
+                  <p className={styles.heroDesc}>
+                    {settings.heroDescription}
+                  </p>
+                  <div className={styles.heroActions}>
+                    <Link href="/catalog" className={styles.btnPrimary}>
+                      Explorar Catálogo
+                    </Link>
+                    <Link href="/about" className={styles.btnSecondary}>
+                      Nuestra Filosofía
+                    </Link>
+                  </div>
+                </div>
+
+                <div className={`${styles.heroVisual} animate`} style={{ animationDelay: '0.4s' }}>
+                  <img 
+                    src={settings.heroHighlightImageUrl} 
+                    alt="Elite Technology Highlight" 
+                  />
                 </div>
               </div>
-
-              <div className={`${styles.heroVisual} animate`} style={{ animationDelay: '0.4s' }}>
-                <img 
-                  src={settings.heroHighlightImageUrl} 
-                  alt="Elite Technology Highlight" 
-                />
-              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
 
-        {/* Featured Categories Lookbook */}
-        {premiumCategories.length > 0 && (
-          <section className={styles.categories}>
-            <div className="container">
-              <div className={styles.sectionTitle}>
-                <span>Colecciones Curadas</span>
-                <h2>Categorías Premium</h2>
-              </div>
-              
-              <div className={styles.categoryGrid}>
-                {premiumCategories.map(cat => (
-                  <Link key={cat.id} href={`/catalog?category=${cat.name}`} className={styles.categoryItem} style={{ textDecoration: 'none' }}>
-                    {cat.imageUrl ? (
-                      <img src={cat.imageUrl} alt={cat.name} />
-                    ) : (
-                      <div style={{ height: '350px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
-                        <ImageIcon size={48} />
+          {/* Featured Categories Lookbook */}
+          {premiumCategories.length > 0 && (
+            <section className={styles.categories}>
+              <div className="container">
+                <div className={styles.sectionTitle}>
+                  <span>Colecciones Curadas</span>
+                  <h2>Categorías Premium</h2>
+                </div>
+                
+                <div className={styles.categoryGrid}>
+                  {premiumCategories.map(cat => (
+                    <Link key={cat.id} href={`/catalog?category=${cat.name}`} className={styles.categoryItem} style={{ textDecoration: 'none' }}>
+                      {cat.imageUrl ? (
+                        <img src={cat.imageUrl} alt={cat.name} />
+                      ) : (
+                        <div style={{ height: '350px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
+                          <ImageIcon size={48} />
+                        </div>
+                      )}
+                      <div className={styles.categoryContent}>
+                        <span>{cat.tagline || 'Essential Collection'}</span>
+                        <h3>{cat.displayTitle || cat.name}</h3>
                       </div>
-                    )}
-                    <div className={styles.categoryContent}>
-                      <span>{cat.tagline || 'Essential Collection'}</span>
-                      <h3>{cat.displayTitle || cat.name}</h3>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Featured Selection */}
-        {featuredProducts.length > 0 && (
-          <section className={styles.featured}>
-            <div className="container">
-              <div className={styles.sectionTitle} style={{ textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                  <span>Piezas Maestras</span>
-                  <h2>Selección Elite</h2>
+                    </Link>
+                  ))}
                 </div>
-                <Link href="/catalog" style={{ color: 'var(--brand-accent)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', marginBottom: '12px' }}>
-                  Ver todo <ArrowRight size={16} />
-                </Link>
               </div>
+            </section>
+          )}
 
-              <div className={styles.productGrid}>
-                {featuredProducts.map(product => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+          {/* Featured Selection */}
+          {featuredProducts.length > 0 && (
+            <section className={styles.featured}>
+              <div className="container">
+                <div className={styles.sectionTitle} style={{ textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <div>
+                    <span>Piezas Maestras</span>
+                    <h2>Selección Elite</h2>
+                  </div>
+                  <Link href="/catalog" style={{ color: 'var(--brand-accent)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', marginBottom: '12px' }}>
+                    Ver todo <ArrowRight size={16} />
+                  </Link>
+                </div>
+
+                <div className={styles.productGrid}>
+                  {featuredProducts.map(product => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Brand Features Section (Trust Bar) */}
+          <section className="container">
+            <div className={styles.features}>
+              <div className={styles.featureItem}>
+                <div className={styles.featureIcon}>
+                  <Zap size={40} />
+                </div>
+                <h3>Entrega Inmediata</h3>
+                <p>Logística de vanguardia garantizando envíos el mismo día dentro del Gran Área Metropolitana.</p>
+              </div>
+              <div className={styles.featureItem}>
+                <div className={styles.featureIcon}>
+                  <ShieldCheck size={40} />
+                </div>
+                <h3>Garantía de Autenticidad</h3>
+                <p>Cada pieza es sometida a un riguroso proceso de verificación por especialistas antes de su entrega.</p>
+              </div>
+              <div className={styles.featureItem}>
+                <div className={styles.featureIcon}>
+                  <Star size={40} />
+                </div>
+                <h3>Soporte Executive</h3>
+                <p>Atención personalizada multicanal para una experiencia de post-venta al nivel de su inversión.</p>
               </div>
             </div>
           </section>
-        )}
 
-        {/* Brand Features Section (Trust Bar) */}
-        <section className="container">
-          <div className={styles.features}>
-            <div className={styles.featureItem}>
-              <div className={styles.featureIcon}>
-                <Zap size={40} />
-              </div>
-              <h3>Entrega Inmediata</h3>
-              <p>Logística de vanguardia garantizando envíos el mismo día dentro del Gran Área Metropolitana.</p>
-            </div>
-            <div className={styles.featureItem}>
-              <div className={styles.featureIcon}>
-                <ShieldCheck size={40} />
-              </div>
-              <h3>Garantía de Autenticidad</h3>
-              <p>Cada pieza es sometida a un riguroso proceso de verificación por especialistas antes de su entrega.</p>
-            </div>
-            <div className={styles.featureItem}>
-              <div className={styles.featureIcon}>
-                <Star size={40} />
-              </div>
-              <h3>Soporte Executive</h3>
-              <p>Atención personalizada multicanal para una experiencia de post-venta al nivel de su inversión.</p>
-            </div>
-          </div>
-        </section>
-
-      </main>
-    </div>
+        </main>
+      </div>
+    </HomeContent>
   );
 }

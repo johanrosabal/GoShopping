@@ -37,6 +37,8 @@ export interface ChatSession {
   type: 'general' | 'order';
   orderId?: string;
   orderNumber?: string;
+  merchantName?: string;
+  merchantId?: string;
 }
 
 const CHATS_COLLECTION = 'chats';
@@ -53,7 +55,9 @@ export const sendMessage = async ({
   role,
   imageUrl,
   orderId,
-  orderNumber
+  orderNumber,
+  merchantName,
+  merchantId
 }: {
   chatId: string;
   userId: string;
@@ -63,8 +67,11 @@ export const sendMessage = async ({
   imageUrl?: string;
   orderId?: string;
   orderNumber?: string;
+  merchantName?: string;
+  merchantId?: string;
 }) => {
   try {
+    console.log('[CHAT SERVICE] Sending message to:', chatId, 'with role:', role);
     const chatRef = doc(db, CHATS_COLLECTION, chatId);
     const messagesRef = collection(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION);
 
@@ -93,8 +100,8 @@ export const sendMessage = async ({
 
     if (orderId) chatData.orderId = orderId;
     if (orderNumber) chatData.orderNumber = orderNumber;
-
-    await setDoc(chatRef, chatData, { merge: true });
+    if (merchantId) chatData.merchantId = merchantId;
+    if (merchantName) chatData.merchantName = merchantName;
 
     await setDoc(chatRef, chatData, { merge: true });
 
@@ -171,6 +178,64 @@ export const subscribeToUserChats = (userId: string, callback: (chats: ChatSessi
       return timeB - timeA;
     });
     callback(sortedChats);
+  });
+};
+
+/**
+ * Subscribes to a merchant's chats (with name fallback)
+ */
+export const subscribeToMerchantChats = (merchantId: string, callback: (chats: ChatSession[]) => void, merchantName?: string) => {
+  const chatsRef = collection(db, CHATS_COLLECTION);
+  
+  // Primary query by ID
+  const qId = query(
+    chatsRef, 
+    where('merchantId', '==', merchantId)
+  );
+
+  let unsubscribeId = onSnapshot(qId, (snapshot) => {
+    const idChats = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as ChatSession[];
+    
+    if (!merchantName) {
+      callback(sortChats(idChats));
+      return;
+    }
+
+    // If we have a name, we also query by name and merge
+    const qName = query(
+      chatsRef,
+      where('merchantName', '==', merchantName)
+    );
+
+    getDocs(qName).then(nameSnapshot => {
+      const nameChats = nameSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatSession[];
+
+      // Merge and deduplicate
+      const allChats = [...idChats];
+      nameChats.forEach(nc => {
+        if (!allChats.find(c => c.id === nc.id)) {
+          allChats.push(nc);
+        }
+      });
+
+      callback(sortChats(allChats));
+    });
+  });
+
+  return unsubscribeId;
+};
+
+const sortChats = (chats: ChatSession[]) => {
+  return chats.sort((a, b) => {
+    const timeA = a.lastMessageAt?.toMillis() || 0;
+    const timeB = b.lastMessageAt?.toMillis() || 0;
+    return timeB - timeA;
   });
 };
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAllOrders, updateOrderStatus, subscribeToAllOrders } from '@/lib/services/orders';
-import { Eye, Check, X, Clock, ExternalLink, Loader2, Plus } from 'lucide-react';
+import { Eye, Check, X, Clock, ExternalLink, Loader2, Plus, ArrowLeft } from 'lucide-react';
 import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import styles from '../admin.module.css';
 
@@ -53,10 +53,13 @@ export default function AdminOrdersPage() {
   return (
     <div className={`${styles.adminPage} container`}>
       <header className={styles.header}>
-        <h1>Panel de <span className={styles.accent}>Pedidos</span></h1>
-        <div className={styles.controls}>
-          {/* Real-time synchronization active */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <Link href="/admin" className={styles.backBtn}>
+            <ArrowLeft size={22} />
+          </Link>
+          <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Panel de <span className={styles.accent}>Pedidos</span></h1>
         </div>
+        <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', marginTop: '12px' }}>Gestión centralizada de transacciones y estados logísticos.</p>
       </header>
 
       {loading ? (
@@ -69,42 +72,48 @@ export default function AdminOrdersPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>ID / Fecha</th>
+                <th>Pedido</th>
+                <th>Fecha</th>
                 <th>Cliente</th>
                 <th>Total</th>
                 <th>Pago</th>
                 <th>Estado</th>
-                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {orders.map(order => (
                 <tr key={order.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>#{order.id.slice(-6)}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                  <td data-label="Pedido">
+                    <button 
+                      className={styles.orderIdLink} 
+                      onClick={() => setSelectedOrder(order)}
+                      title="Ver detalles del pedido"
+                    >
+                      #{order.orderNumber || order.id.slice(-6).toUpperCase()}
+                      <Eye size={14} style={{ marginLeft: '8px', opacity: 0.8 }} />
+                    </button>
+                  </td>
+                  <td data-label="Fecha">
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
                       {order.createdAt?.toDate().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
                   </td>
-                  <td>
-                    <div>{order.customerName}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{order.email}</div>
+                  <td data-label="Cliente">
+                    <div className={styles.customerInfo}>
+                      <div className={styles.customerName}>{order.customerName}</div>
+                      <div className={styles.customerEmail}>{order.email}</div>
+                    </div>
                   </td>
-                  <td style={{ fontWeight: 700 }}>₡{order.total.toLocaleString()}</td>
-                  <td>
+                  <td data-label="Total" style={{ fontWeight: 700 }}>₡{order.total.toLocaleString()}</td>
+                  <td data-label="Pago">
                     <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 600 }}>
                       {order.paymentMethod}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Estado">
                     <span className={`${styles.statusBadge} ${styles['status_' + order.status]}`}>
                       {order.status === 'pending' ? 'Pendiente' : order.status === 'completed' ? 'Pagado' : 'Fallido'}
                     </span>
-                  </td>
-                  <td>
-                    <button className={styles.viewBtn} onClick={() => setSelectedOrder(order)}>
-                      <Eye size={16} style={{ marginRight: '8px' }} /> Ver Detalles
-                    </button>
                   </td>
                 </tr>
               ))}
@@ -117,31 +126,23 @@ export default function AdminOrdersPage() {
       {selectedOrder && (
         <div className={styles.modalOverlay} onClick={() => setSelectedOrder(null)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalHeader} style={{ padding: '32px 40px', borderBottom: 'none', position: 'relative' }}>
-              <div>
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '4px' }}>
-                  Pedido <span className={styles.accent}>#{selectedOrder.orderNumber || selectedOrder.id.slice(-6)}</span>
-                </h2>
-                <span className={`${styles.statusBadge} ${styles['status_' + selectedOrder.status]}`}>
-                  {selectedOrder.status === 'pending' ? 'Esperando Verificación' : selectedOrder.status === 'completed' ? 'Transacción Exitosa' : 'Pedido Rechazado'}
-                </span>
-              </div>
+            <div className={styles.modalHeader}>
+              <h2>
+                Pedido <span className={styles.accent}>#{selectedOrder.orderNumber || selectedOrder.id.slice(-6)}</span>
+              </h2>
+              <span className={`${styles.statusBadge} ${styles['status_' + selectedOrder.status]}`} style={{ width: 'fit-content' }}>
+                {selectedOrder.status === 'pending' ? 'Esperando Verificación' : selectedOrder.status === 'completed' ? 'Transacción Exitosa' : 'Pedido Rechazado'}
+              </span>
               <button 
                 onClick={() => setSelectedOrder(null)} 
-                className={styles.cancelBtn}
-                style={{ 
-                  position: 'absolute',
-                  top: '32px',
-                  right: '40px',
-                  padding: '8px 16px',
-                  fontSize: '0.8rem'
-                }}
+                className={styles.modalCloseBtn}
+                title="Cerrar"
               >
-                Cerrar
+                <X size={20} />
               </button>
             </div>
             
-            <div className={styles.modalContent} style={{ textAlign: 'left', padding: '0 40px 40px' }}>
+            <div className={styles.modalContent}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
                 {/* Columna Izquierda: Cliente y Artículos */}
                 <div>
@@ -156,7 +157,7 @@ export default function AdminOrdersPage() {
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Correo Electrónico</label>
-                        <span style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{selectedOrder.email}</span>
+                        <span style={{ fontSize: '1rem', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{selectedOrder.email}</span>
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Fecha de Compra</label>
@@ -169,11 +170,21 @@ export default function AdminOrdersPage() {
                     <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--brand-accent)', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
                       Resumen de Artículos
                     </h3>
-                    <div style={{ display: 'grid', gap: '12px' }}>
+                    <div style={{ display: 'grid', gap: '16px' }}>
                       {selectedOrder.items?.map((item: any, idx: number) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>{item.name} <strong style={{ color: 'var(--text-primary)' }}>x{item.quantity}</strong></span>
-                          <span style={{ fontWeight: 600 }}>₡{(item.price * item.quantity).toLocaleString()}</span>
+                        <div key={idx} className={styles.itemRow} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                            <div className={styles.itemThumbnail}>
+                              <img src={item.images?.[0] || item.image || 'https://via.placeholder.com/60'} alt={item.name} />
+                            </div>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              <strong style={{ color: 'var(--text-primary)', display: 'block', fontSize: '0.95rem' }}>{item.name}</strong>
+                              Cantidad: {item.quantity}
+                            </span>
+                          </div>
+                          <span className={styles.itemPrice} style={{ fontWeight: 800, color: 'var(--brand-accent)', fontSize: '1rem' }}>
+                            ₡{(item.price * item.quantity).toLocaleString()}
+                          </span>
                         </div>
                       ))}
                       <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'grid', gap: '8px' }}>
@@ -199,10 +210,10 @@ export default function AdminOrdersPage() {
                   <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--brand-accent)', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
                     Verificación de Pago
                   </h3>
-                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', border: '1px solid var(--border)', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div className={styles.paymentVerification} style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', border: '1px solid var(--border)', marginBottom: '24px' }}>
+                    <div className={styles.paymentRow} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Método Seleccionado:</span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-primary)' }}>{selectedOrder.paymentMethod}</span>
+                      <span className={styles.paymentValue} style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-primary)' }}>{selectedOrder.paymentMethod}</span>
                     </div>
                     
                     {selectedOrder.paymentMethod === 'sinpe' ? (
@@ -224,16 +235,16 @@ export default function AdminOrdersPage() {
                       </div>
                     ) : (
                       <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div className={styles.paymentRow} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                           <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>ID Transacción:</span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                          <span className={styles.paymentValue} style={{ fontSize: '0.75rem', fontWeight: 600 }}>
                             {selectedOrder.transactionId || 
                              (selectedOrder.notes?.includes('PayPal ID:') ? selectedOrder.notes.split('PayPal ID: ')[1] : 'Confirmado')}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className={styles.paymentRow} style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>Email Pagador:</span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{selectedOrder.payerEmail || 'PayPal Verified Account'}</span>
+                          <span className={styles.paymentValue} style={{ fontSize: '0.75rem', fontWeight: 600 }}>{selectedOrder.payerEmail || 'PayPal Verified Account'}</span>
                         </div>
                       </div>
                     )}

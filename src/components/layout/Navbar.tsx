@@ -7,11 +7,22 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import Sidebar from './Sidebar';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const { user, userData, logout, isAdmin, isMerchant } = useAuth();
   const { cartCount, setIsCartOpen } = useCart();
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const router = useRouter();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery(''); // Clear search after redirect
+    }
+  };
 
   return (
     <nav className={styles.navbar}>
@@ -23,14 +34,16 @@ export default function Navbar() {
         </div>
         
         <div className={styles.center}>
-          <div className={styles.searchBar}>
+          <form className={styles.searchBar} onSubmit={handleSearch}>
             <Search size={18} className={styles.searchIcon} />
             <input 
               type="text" 
               placeholder="Buscar productos de elite..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               suppressHydrationWarning
             />
-          </div>
+          </form>
         </div>
 
         <div className={styles.right}>

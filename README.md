@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 📘 Documentación del Sistema
+*   **[Guía Técnica Administrativa (ADMIN_GUIDE.md)](./ADMIN_GUIDE.md)**: Detalle de arquitectura multi-comercio, flujos de afiliación, pagos y lógica de negocio.
+
+---
+
 ## Getting Started
 
 First, run the development server:

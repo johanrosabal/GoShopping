@@ -1,30 +1,76 @@
 .sinpe {
   margin-top: 24px;
-  padding: 24px;
-  background: var(--bg-primary);
-  border-radius: 0;
-  border: 1px dashed var(--border);
   animation: fadeIn 0.4s ease-out;
 }
 
-.instruction {
-  display: flex;
-  gap: 12px;
-  background: rgba(245, 158, 10, 0.1);
-  padding: 16px;
-  border-radius: 0;
+.container {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 32px;
+  background: var(--bg-secondary);
+  padding: 32px;
+  border: 1px solid var(--border);
   margin-bottom: 24px;
-  color: var(--brand-primary);
-  font-size: 0.95rem;
-  align-items: center;
 }
 
-.copyBtn {
+.sinpeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.valueRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.phoneValue {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--brand-accent);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.ownerValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.detailBox {
+  flex: 1;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  font-family: monospace;
+  font-size: 1rem;
+  color: var(--brand-accent);
+  font-weight: 700;
+}
+
+.actionBtn {
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -32,15 +78,61 @@
   transition: all 0.2s ease;
 }
 
-.copyBtn:hover {
-  background: var(--bg-primary);
+.actionBtn:hover {
   border-color: var(--brand-accent);
   color: var(--brand-accent);
-  transform: scale(1.1);
+  background: var(--bg-primary);
 }
 
-.instruction strong {
+.copyDetailBtn {
+  background: var(--brand-accent);
+  color: #000;
+  border: none;
+  padding: 0 16px;
+  height: 44px;
+  font-size: 0.85rem;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.copyDetailBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.steps {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 24px;
+  border-left: 3px solid var(--brand-accent);
+}
+
+.steps h3 {
+  font-size: 1rem;
+  margin: 0 0 16px 0;
+  color: var(--brand-accent);
+}
+
+.steps ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.steps li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.steps strong {
+  color: var(--text-primary);
 }
 
 .uploadArea {
@@ -58,6 +150,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   background: var(--bg-secondary);
+  text-align: center;
 }
 
 .uploadLabel:hover {
@@ -73,6 +166,12 @@
   color: var(--text-secondary);
 }
 
+.placeholder p, .fileSelected p {
+  font-size: 0.75rem;
+  margin: 0;
+  opacity: 0.6;
+}
+
 .fileSelected span {
   font-weight: 600;
   color: var(--text-primary);
@@ -83,6 +182,22 @@
   font-size: 0.85rem;
   color: var(--text-tertiary);
   font-style: italic;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  
+  .phoneValue {
+    font-size: 1.5rem;
+  }
+  
+  .copyDetailBtn span {
+    display: none;
+  }
 }
 
 @keyframes fadeIn {

@@ -16,7 +16,8 @@ import {
   Users,
   Settings,
   MessageSquare,
-  Store
+  Store,
+  BookOpen
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -167,6 +168,17 @@ export default function AdminPage() {
           <ArrowRight size={20} className={styles.arrow} />
         </Link>
 
+        <Link href="/admin/orders/sinpe" className={`${styles.moduleCard} animate`} style={{ animationDelay: '0.35s' }}>
+          <div className={styles.moduleIcon} style={{ background: '#10b98115', color: '#10b981' }}>
+            <ShieldCheck size={32} />
+          </div>
+          <div className={styles.moduleInfo}>
+            <h3>Validación SINPE</h3>
+            <p>Aprobación rápida de comprobantes y transferencias.</p>
+          </div>
+          <ArrowRight size={20} className={styles.arrow} />
+        </Link>
+
         <Link href="/admin/chats" className={`${styles.moduleCard} animate`} style={{ animationDelay: '0.4s' }}>
           <div className={styles.moduleIcon} style={{ background: 'var(--brand-accent)15', color: 'var(--brand-accent)' }}>
             <MessageSquare size={32} />
@@ -243,6 +255,17 @@ export default function AdminPage() {
           </div>
           <ArrowRight size={20} className={styles.arrow} />
         </Link>
+
+        <Link href="/admin/docs" className={`${styles.moduleCard} animate`} style={{ animationDelay: '1s' }}>
+          <div className={styles.moduleIcon} style={{ background: 'var(--brand-accent)15', color: 'var(--brand-accent)' }}>
+            <BookOpen size={32} />
+          </div>
+          <div className={styles.moduleInfo}>
+            <h3>Documentación Elite</h3>
+            <p>Guía técnica de arquitectura, flujos y lógica de negocio.</p>
+          </div>
+          <ArrowRight size={20} className={styles.arrow} />
+        </Link>
       </div>
 
       {/* Recent Activity */}
@@ -274,23 +297,45 @@ export default function AdminPage() {
               ) : (
                 stats.recentOrders.map(order => (
                   <tr key={order.id}>
-                    <td style={{ fontWeight: 600 }}>{order.customerName}</td>
-                    <td style={{ color: 'var(--text-tertiary)' }}>{order.createdAt?.toDate().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--brand-accent)' }}>₡{order.total?.toLocaleString()}</td>
-                    <td>
-                      <span className={`${styles.statusBadge} ${styles['status_' + order.status]}`}>
-                        {order.status === 'pending' ? 'Pendiente' : order.status === 'completed' ? 'Pagado' : 'Fallido'}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>
-                        {order.paymentMethod}
-                      </span>
-                    </td>
-                    <td>
-                      <Link href={`/admin/orders/${order.id}`} className={styles.viewBtn}>
-                        <Eye size={14} />
+                    <td data-label="Pedido">
+                      <Link 
+                        href="/admin/orders" 
+                        className={styles.orderIdLink} 
+                        style={{ display: 'inline-block' }}
+                      >
+                        #{order.orderNumber || order.id.slice(-6).toUpperCase()}
                       </Link>
+                    </td>
+                    <td data-label="Cliente">
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{order.customerName}</div>
+                      </div>
+                    </td>
+                    <td data-label="Total">
+                      <div>
+                        <div style={{ fontWeight: 700, color: 'var(--brand-accent)' }}>₡{order.total?.toLocaleString()}</div>
+                      </div>
+                    </td>
+                    <td data-label="Pago">
+                      <div>
+                        <span className={`${styles.statusBadge} ${styles['status_' + order.status]}`}>
+                          {order.status === 'pending' ? 'Pendiente' : order.status === 'completed' ? 'Pagado' : 'Fallido'}
+                        </span>
+                      </div>
+                    </td>
+                    <td data-label="Estado">
+                      <div>
+                        <span style={{ textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>
+                          {order.paymentMethod}
+                        </span>
+                      </div>
+                    </td>
+                    <td data-label="Acción">
+                      <div>
+                        <Link href={`/admin/orders/${order.id}`} className={styles.viewBtn}>
+                          <Eye size={14} />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))

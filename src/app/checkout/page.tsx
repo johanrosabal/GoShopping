@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector';
 import SinpePayment from '@/components/checkout/SinpePayment';
 import PayPalPayment from '@/components/checkout/PayPalPayment';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { createOrder, OrderData } from '@/lib/services/orders';
+import { createOrder, OrderData, generateOrderNumber } from '@/lib/services/orders';
 import { getEffectivePrice } from '@/lib/services/products';
 import { getMerchantById, MerchantProfile } from '@/lib/services/merchants';
 import { Loader2, CheckCircle, Store, Clock, Check, ArrowRight, FileText, Download } from 'lucide-react';
@@ -37,6 +37,7 @@ function CheckoutContent() {
   const [voucherFile, setVoucherFile] = useState<File | null>(null);
   const [merchant, setMerchant] = useState<MerchantProfile | null>(null);
   const [loadingMerchant, setLoadingMerchant] = useState(!!merchantIdParam);
+  const [pregeneratedOrderNumber, setPregeneratedOrderNumber] = useState<string>('');
   
   // Last order capture for success screen
   const [lastOrderItems, setLastOrderItems] = useState<any[]>([]);
@@ -125,6 +126,9 @@ function CheckoutContent() {
       setMerchant(null);
       setLoadingMerchant(false);
     }
+    
+    // Generate a fresh order number for each session
+    setPregeneratedOrderNumber(generateOrderNumber());
   }, [merchantIdParam, sessionSteps.length]);
 
   const currentMId = merchantIdParam || (sessionSteps.length > 0 ? sessionSteps.find(s => s.status === 'idle')?.merchantId : 'go-shopping-main');
@@ -162,7 +166,8 @@ function CheckoutContent() {
         paymentMethod: method,
         status: method === 'paypal' ? 'completed' : 'pending',
         merchantId: currentMId || 'go-shopping-main',
-        merchantName: merchant ? merchant.name : 'GoShopping Oficial'
+        merchantName: merchant ? merchant.name : 'GoShopping Oficial',
+        orderNumber: method === 'sinpe' ? pregeneratedOrderNumber : undefined
       };
 
       const { orderId, orderNumber } = await createOrder(orderData, voucherFile || undefined);
@@ -189,7 +194,7 @@ function CheckoutContent() {
     }
   };
 
-  const handlePayPalSuccess = async (details: any) => {
+  const handlePayPalSuccess = useMemo(() => async (details: any) => {
     setIsProcessing(true);
     try {
       const subtotal = filteredTotal / 1.13;
@@ -233,7 +238,7 @@ function CheckoutContent() {
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [filteredTotal, filteredItems, user, currentMId, merchant, clearMerchantItems]);
 
   const generatePDF = async () => {
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -283,7 +288,7 @@ function CheckoutContent() {
           <div style={{ marginBottom: '20px' }}>
             <p style={{ margin: '0 0 5px 0', fontSize: '0.7rem', textTransform: 'uppercase', color: '#d4af37' }}>Comercio</p>
             <p style={{ margin: 0, fontWeight: 700 }}>{lastOrderMerchantName}</p>
-            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.8 }}>Email: {merchant?.email || 'soporte@goshopping.com'}</p>
+            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.8 }}>Email: {merchant?.contact?.email || 'soporte@goshopping.com'}</p>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
@@ -377,7 +382,11 @@ function CheckoutContent() {
           {method === 'sinpe' && (
             <section className={styles.section}>
               <h2>2. Detalles de SINPE Móvil - <span className={styles.accent}>{merchant?.name || 'GoShopping'}</span></h2>
-              <SinpePayment onFileSelect={setVoucherFile} merchant={merchant} />
+              <SinpePayment 
+                onFileSelect={setVoucherFile} 
+                merchant={merchant} 
+                orderNumber={pregeneratedOrderNumber}
+              />
             </section>
           )}
 

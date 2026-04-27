@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { 
   subscribeToAllChats, 
   subscribeToMessages, 
@@ -19,14 +20,18 @@ import {
   Image as ImageIcon, 
   Loader2,
   BellRing,
-  Tag
+  Tag,
+  ArrowLeft,
+  X
 } from 'lucide-react';
 import { uploadFile } from '@/lib/services/storage';
 import styles from './AdminChats.module.css';
 import chatStyles from '@/components/profile/ChatWindow.module.css';
 import adminStyles from '../admin.module.css';
+import Link from 'next/link';
 
 export default function AdminChatsPage() {
+  const { userData } = useAuth();
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -92,8 +97,8 @@ export default function AdminChatsPage() {
       
       const success = await sendMessage({
         chatId: selectedChat.id,
-        userId: selectedChat.userId,
-        userName: selectedChat.userName,
+        userId: userData?.uid || 'admin',
+        userName: userData?.displayName || 'Soporte GoShopping',
         text: textToSend,
         role: 'admin',
         orderId: selectedChat.orderId,
@@ -125,12 +130,17 @@ export default function AdminChatsPage() {
   return (
     <div className={adminStyles.adminPage}>
       <div className="container">
-        <div className={adminStyles.header}>
-          <h1>Consola de <span className={adminStyles.accent}>Soporte por Casos</span></h1>
-          <p style={{ color: 'var(--text-tertiary)' }}>Atención contextualizada por pedido y consultas generales.</p>
-        </div>
+        <header className={adminStyles.header}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <Link href="/admin" className={adminStyles.backBtn}>
+              <ArrowLeft size={22} />
+            </Link>
+            <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Consola de <span className={adminStyles.accent}>Soporte</span></h1>
+          </div>
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', marginTop: '12px' }}>Atención contextualizada por pedido y consultas generales.</p>
+        </header>
 
-        <div className={styles.adminContainer}>
+        <div className={`${styles.adminContainer} ${selectedChat ? styles.showChat : ''}`}>
           {/* Chat List */}
           <aside className={styles.chatList}>
             <div style={{ padding: '20px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
@@ -177,26 +187,29 @@ export default function AdminChatsPage() {
               <>
                 <div className={styles.chatHeader}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--brand-accent)', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                    <button className={styles.mobileBackBtn} onClick={() => setSelectedChat(null)}>
+                      <ArrowLeft size={20} />
+                    </button>
+                    <div className={styles.avatar}>
                       {selectedChat.userName[0]}
                     </div>
                     <div>
-                      <h3 style={{ margin: 0, fontSize: '1.1rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1rem' }}>
                         {selectedChat.userName}
-                        {selectedChat.type === 'order' && <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginLeft: '8px' }}>- Pedido #{selectedChat.orderNumber}</span>}
+                        {selectedChat.type === 'order' && <span className={styles.orderLabel}>- #{selectedChat.orderNumber}</span>}
                       </h3>
                       <div className={styles.statusIndicator}>
                         {selectedChat.status === 'active' ? (
-                          <><Clock size={12} className={styles.statusActive} /> Activo</>
+                          <><Clock size={10} className={styles.statusActive} /> Activo</>
                         ) : (
-                          <><CheckCircle size={12} className={styles.statusResolved} /> Resuelto</>
+                          <><CheckCircle size={10} className={styles.statusResolved} /> Resuelto</>
                         )}
                       </div>
                     </div>
                   </div>
                   {selectedChat.status === 'active' && (
                     <button className={styles.resolveBtn} onClick={handleResolve}>
-                      <CheckCircle size={16} /> Resolver Caso
+                      <CheckCircle size={16} /> <span className={styles.btnText}>Resolver</span>
                     </button>
                   )}
                 </div>
@@ -205,10 +218,34 @@ export default function AdminChatsPage() {
                   {messages.map((msg, index) => (
                     <div 
                       key={msg.id || index} 
-                      className={`${styles.messageWrapper} ${msg.senderRole === 'admin' ? styles.adminMessageWrapper : styles.clientMessageWrapper}`}
+                      className={styles.messageWrapper}
+                      style={{ alignSelf: msg.senderRole === 'admin' ? 'flex-end' : 'flex-start' }}
                     >
-                      <div className={styles.bubble}>
-                        {msg.text && <p>{msg.text}</p>}
+                      <div style={{ 
+                        fontSize: '0.65rem', 
+                        fontWeight: 800, 
+                        marginBottom: '4px', 
+                        marginLeft: msg.senderRole === 'admin' ? '0' : '12px',
+                        marginRight: msg.senderRole === 'admin' ? '12px' : '0',
+                        textAlign: msg.senderRole === 'admin' ? 'right' : 'left',
+                        color: msg.senderRole === 'admin' ? 'var(--brand-accent)' : 'var(--text-tertiary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        {msg.senderRole === 'admin' ? 'Soporte' : selectedChat.userName}
+                      </div>
+                      <div 
+                        className={styles.bubble}
+                        style={{
+                          background: msg.senderRole === 'admin' ? '#1a1a1a' : 'var(--brand-accent)',
+                          color: msg.senderRole === 'admin' ? '#fff' : '#000',
+                          border: msg.senderRole === 'admin' ? '1px solid rgba(212, 175, 55, 0.3)' : 'none',
+                          borderRadius: '20px',
+                          borderBottomRightRadius: msg.senderRole === 'admin' ? '4px' : '20px',
+                          borderBottomLeftRadius: msg.senderRole === 'admin' ? '20px' : '4px'
+                        }}
+                      >
+                        {msg.text && <p style={{ margin: 0 }}>{msg.text}</p>}
                         {msg.imageUrl && (
                           <img 
                             src={msg.imageUrl} 
@@ -218,7 +255,7 @@ export default function AdminChatsPage() {
                           />
                         )}
                       </div>
-                      <span className={styles.time}>
+                      <span className={styles.time} style={{ textAlign: msg.senderRole === 'admin' ? 'right' : 'left' }}>
                         {msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
                       </span>
                     </div>

@@ -21,7 +21,13 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [images, setImages] = useState<{file?: File, preview: string}[]>([]);
   const [video, setVideo] = useState<{file?: File, preview: string} | null>(null);
-  const [modal, setModal] = useState({ 
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: any;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ 
     isOpen: false, 
     type: 'success' as any, 
     title: '', 
@@ -119,7 +125,7 @@ export default function EditProductPage() {
   const handleDelete = async () => {
     setModal({
       isOpen: true,
-      type: 'warning' as any,
+      type: 'confirm' as any,
       title: 'Eliminar Producto',
       message: '¿Estás seguro de que deseas eliminar este producto de forma permanente? Esta acción no se puede deshacer.',
       onConfirm: async () => {
@@ -619,6 +625,7 @@ export default function EditProductPage() {
         title={modal.title}
         message={modal.message}
         onClose={() => setModal({ ...modal, isOpen: false })}
+        onConfirm={modal.onConfirm}
       />
     </div>
   );

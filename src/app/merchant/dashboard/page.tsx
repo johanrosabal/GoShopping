@@ -15,7 +15,9 @@ import {
   Users,
   Coins,
   Globe,
-  Clock
+  Clock,
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import { getMerchantByOwnerUid, getMerchantById } from '@/lib/services/merchants';
@@ -287,6 +289,25 @@ export default function MerchantDashboard() {
               </div>
               <ChevronRight size={20} />
             </Link>
+
+            <Link href="/merchant/orders/sinpe" className={styles.actionCard}>
+              <div className={styles.actionInner}>
+                <ShieldCheck size={24} style={{ color: '#10b981' }} />
+                <h3>Validar Pagos SINPE</h3>
+                <p>Aprueba transferencias bancarias pendientes.</p>
+              </div>
+              <ChevronRight size={20} />
+            </Link>
+
+            <Link href="/merchant/chats" className={styles.actionCard}>
+              <div className={styles.actionInner}>
+                <MessageSquare size={24} style={{ color: 'var(--brand-accent)' }} />
+                <h3>Soporte Chat</h3>
+                <p>Responde consultas de tus clientes Elite.</p>
+              </div>
+              <ChevronRight size={20} />
+            </Link>
+
             <Link href={`/${merchant?.slug || ''}`} className={styles.actionCard} target="_blank">
               <div className={styles.actionInner}>
                 <Globe size={24} />

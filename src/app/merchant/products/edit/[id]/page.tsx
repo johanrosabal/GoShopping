@@ -29,6 +29,7 @@ export default function MerchantEditProductPage() {
     type: ModalType;
     title: string;
     message: string;
+    onConfirm?: () => void;
   }>({ isOpen: false, type: 'info', title: '', message: '' });
 
   const [formData, setFormData] = useState({
@@ -145,7 +146,7 @@ export default function MerchantEditProductPage() {
   const handleDelete = async () => {
     setModal({
       isOpen: true,
-      type: 'warning' as any,
+      type: 'confirm' as any,
       title: 'Eliminar Producto',
       message: '¿Estás seguro de que deseas eliminar este producto de forma permanente? Esta acción no se puede deshacer.',
       onConfirm: async () => {
@@ -626,6 +627,7 @@ export default function MerchantEditProductPage() {
         title={modal.title}
         message={modal.message}
         onClose={() => setModal({ ...modal, isOpen: false })}
+        onConfirm={modal.onConfirm}
       />
     </div>
   );

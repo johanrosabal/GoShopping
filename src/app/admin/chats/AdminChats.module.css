@@ -3,7 +3,7 @@
   grid-template-columns: 350px 1fr;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  height: 750px; /* Increased height to ensure everything fits */
+  height: 100%; /* Adapts to parent */
   margin-bottom: 40px;
   overflow: hidden;
 }
@@ -165,16 +165,17 @@
 }
 
 .adminMessageWrapper .bubble {
-  background: var(--brand-accent);
-  color: black;
-  border-bottom-right-radius: 2px;
+  background: #1a1a1a;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #fff;
+  border-bottom-right-radius: 4px;
 }
 
 .clientMessageWrapper .bubble {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  border-bottom-left-radius: 2px;
+  background: var(--brand-accent);
+  color: #000;
+  border-bottom-left-radius: 4px;
+  font-weight: 500;
 }
 
 .time {
@@ -256,4 +257,91 @@
 .sendBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.avatar {
+  width: 40px; 
+  height: 40px; 
+  border-radius: 50%; 
+  background: var(--brand-accent); 
+  color: black; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.mobileBackBtn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 8px;
+  margin-left: -10px;
+}
+
+@media (max-width: 1024px) {
+  .adminContainer {
+    grid-template-columns: 300px 1fr;
+  }
+}
+
+@media (max-width: 850px) {
+  .adminContainer {
+    grid-template-columns: 1fr;
+    position: relative;
+  }
+
+  .chatList {
+    width: 100%;
+    display: block;
+  }
+
+  .chatView {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 20;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--bg-tertiary);
+  }
+
+  .showChat .chatView {
+    transform: translateX(0);
+  }
+
+  .mobileBackBtn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-right: 12px;
+  }
+}
+
+/* Ensure bubbles are responsive */
+@media (max-width: 480px) {
+  .messageWrapper {
+    max-width: 90%;
+  }
+  
+  .bubble {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .inputArea {
+    padding: 15px !important;
+    gap: 10px !important;
+  }
+  
+  .actionBtn {
+    width: 40px !important;
+    height: 40px !important;
+  }
 }

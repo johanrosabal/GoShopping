@@ -33,7 +33,8 @@ import {
   ShoppingBag,
   Package,
   ArrowRight,
-  Tag
+  Tag,
+  Store
 } from 'lucide-react';
 import ShoppingListManager from '@/components/profile/ShoppingListManager';
 import ChatWindow from '@/components/profile/ChatWindow';
@@ -54,7 +55,7 @@ function ProfileContent() {
   const [orders, setOrders] = useState<(OrderData & { id: string })[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [userChats, setUserChats] = useState<ChatSession[]>([]);
-  const [selectedChatContext, setSelectedChatContext] = useState<{ chatId: string, orderId?: string, orderNumber?: string } | null>(null);
+  const [selectedChatContext, setSelectedChatContext] = useState<{ chatId: string, orderId?: string, orderNumber?: string, merchantName?: string, merchantId?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -73,7 +74,7 @@ function ProfileContent() {
     message: '' 
   });
 
-  // Sync tab and specific chat from URL parameters
+  // Sync tab and specific chat from URL parameters - Only on searchParams change or mount
   useEffect(() => {
     const tab = searchParams.get('tab');
     const chatId = searchParams.get('chatId');
@@ -84,13 +85,16 @@ function ProfileContent() {
     else if (tab === 'orders') setActiveTab('orders');
     else if (tab === 'chat') {
       setActiveTab('chat');
-      if (chatId) {
+      // If we have a chatId in URL but no context selected yet, try to find it
+      if (chatId && !selectedChatContext) {
         const existingChat = userChats.find(c => c.id === chatId);
         if (existingChat) {
           setSelectedChatContext({
             chatId: existingChat.id,
             orderId: existingChat.orderId,
-            orderNumber: existingChat.orderNumber
+            orderNumber: existingChat.orderNumber,
+            merchantName: existingChat.merchantName,
+            merchantId: existingChat.merchantId
           });
         } else {
           // Fallback: Infer from chatId if possible
@@ -104,7 +108,7 @@ function ProfileContent() {
       }
     }
     else if (tab === 'profile') setActiveTab('profile');
-  }, [searchParams, userChats]);
+  }, [searchParams]); // Removed userChats from dependency to avoid resetting on every message
 
   // Address edit state
   const [newAddress, setNewAddress] = useState({ alias: '', detail: '', mapsUrl: '' });
@@ -715,10 +719,16 @@ function ProfileContent() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '12px' }}>
                         <div>
                           <h4 style={{ margin: 0 }}>Pedido #{order.orderNumber}</h4>
-                          <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                            <Store size={14} style={{ color: 'var(--brand-accent)' }} />
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {order.merchantName || 'GoShopping Oficial'}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '4px' }}>
                             Realizado el {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' }) : 'Recientemente'}
                           </p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--brand-accent)', fontWeight: 600, textTransform: 'uppercase', marginTop: '4px' }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--brand-accent)', fontWeight: 600, textTransform: 'uppercase', marginTop: '2px' }}>
                             Pago vía: {order.paymentMethod === 'paypal' ? 'PayPal' : 'SINPE Móvil'}
                           </p>
                         </div>
@@ -744,7 +754,9 @@ function ProfileContent() {
                               setSelectedChatContext({
                                 chatId: `order_${order.id}`,
                                 orderId: order.id,
-                                orderNumber: order.orderNumber
+                                orderNumber: order.orderNumber,
+                                merchantName: order.merchantName,
+                                merchantId: order.merchantId
                               });
                               setActiveTab('chat');
                             }}
@@ -858,7 +870,9 @@ function ProfileContent() {
                           onClick={() => setSelectedChatContext({ 
                             chatId: chat.id, 
                             orderId: chat.orderId, 
-                            orderNumber: chat.orderNumber 
+                            orderNumber: chat.orderNumber,
+                            merchantName: chat.merchantName,
+                            merchantId: chat.merchantId
                           })}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
@@ -866,6 +880,12 @@ function ProfileContent() {
                               <Tag size={18} color="var(--brand-accent)" />
                               <div>
                                 <h4 style={{ margin: 0 }}>Pedido #{chat.orderNumber}</h4>
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Cliente: {chat.userName}</span>
+                                  {chat.merchantName && (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--brand-accent)', fontWeight: 600 }}>Tienda: {chat.merchantName}</span>
+                                  )}
+                                </div>
                                 <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>{chat.lastMessage}</p>
                               </div>
                             </div>
@@ -880,12 +900,14 @@ function ProfileContent() {
                 </div>
               ) : (
                 <ChatWindow 
-                  chatId={selectedChatContext.chatId}
+                  chatId={selectedChatContext.chatId} 
                   userId={user.uid} 
-                  userName={user.displayName || 'Cliente Elite'} 
+                  userName={profile.displayName}
                   orderId={selectedChatContext.orderId}
                   orderNumber={selectedChatContext.orderNumber}
-                  onBack={() => setSelectedChatContext(null)}
+                  merchantName={selectedChatContext.merchantName}
+                  merchantId={selectedChatContext.merchantId}
+                  onBack={userChats.length > 1 ? () => setSelectedChatContext(null) : undefined}
                 />
               )}
             </div>

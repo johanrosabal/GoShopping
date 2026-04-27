@@ -209,3 +209,39 @@
   font-size: 0.85rem;
   color: #888;
 }
+/* Mobile Sidebar Logic */
+.closeMobileMenu {
+  display: none;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+}
+
+@media (max-width: 850px) {
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    z-index: 100;
+    transition: left 0.3s ease;
+  }
+
+  .sidebarOpen {
+    left: 0;
+  }
+
+  .closeMobileMenu {
+    display: block;
+  }
+
+  .content {
+    padding: 0 !important;
+  }
+
+  .mobile-header-toggle {
+    display: flex !important;
+  }
+}

@@ -243,6 +243,25 @@
   border-color: var(--brand-primary);
 }
 
+.orderIdLink {
+  background: transparent;
+  border: none;
+  color: var(--brand-accent);
+  font-weight: 800;
+  font-size: 1rem;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+}
+
+.orderIdLink:hover {
+  color: white;
+  text-decoration: underline;
+}
+
 .approveBtn { 
   background: linear-gradient(to right, #D4AF37, #C5A059);
   color: #000000 !important;
@@ -552,4 +571,252 @@
 .switchInput:checked + .switchLabel::after {
   left: calc(100% - 18px);
   background: white;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .adminPage {
+    padding: 24px 16px 60px;
+  }
+
+  .header h1 {
+    font-size: 1.8rem !important;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .modulesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tableContainer {
+    background: transparent;
+    border: none;
+    overflow: visible;
+  }
+
+  .table, .table thead, .table tbody, .table th, .table td, .table tr {
+    display: block;
+  }
+
+  .table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .table tr {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 24px;
+    padding: 20px;
+    border-radius: 0; /* Estilo Go-Shopping cuadrado */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+
+  .table td {
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 14px 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    text-align: left;
+  }
+
+  .table td:last-child {
+    border-bottom: 0;
+    padding-bottom: 0 !important;
+    margin-top: 10px;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    font-weight: 800;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    color: var(--brand-accent);
+    letter-spacing: 0.15em;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .header {
+    margin-bottom: 32px;
+    gap: 16px;
+  }
+
+  .header > div {
+    flex-direction: row !important;
+    align-items: center !important;
+    width: 100%;
+  }
+
+  .backBtn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--brand-accent);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .orderIdLink {
+    background: transparent;
+    border: none;
+    color: var(--brand-accent);
+    font-weight: 900;
+    font-size: 1.1rem;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-family: inherit;
+    letter-spacing: 0.05em;
+  }
+
+  .orderIdLink:hover {
+    color: #ffffff;
+    text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+    transform: translateX(5px);
+  }
+
+  .customerInfo {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .customerName {
+    font-weight: 700;
+    font-size: 1rem;
+    color: white;
+    word-break: break-word;
+    margin-bottom: 2px;
+  }
+
+  .customerEmail {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    word-break: break-all;
+  }
+
+  .table td .viewBtn {
+    width: 100%;
+    padding: 14px !important;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    display: flex;
+    align-items: center;
+  }
+
+  .itemThumbnail {
+    width: 60px;
+    height: 60px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .itemThumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Modal Responsivo Elite */
+  .modalOverlay {
+    padding: 0;
+    z-index: 99999;
+  }
+
+  .modal {
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    overflow-y: auto;
+    border: none;
+  }
+
+  .modalHeader {
+    padding: 30px 24px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .modalHeader h2 {
+    font-size: 1.3rem !important;
+    margin: 0;
+    padding-right: 40px; /* Espacio para el botón X */
+    word-break: break-all;
+  }
+
+  .modalCloseBtn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 36px;
+    height: 36px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    z-index: 10;
+  }
+
+  .modalContent {
+    padding: 24px !important;
+  }
+
+  .modalContent > div {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  .itemRow {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 12px;
+    padding-bottom: 16px !important;
+  }
+
+  .itemPrice {
+    width: auto;
+    text-align: right;
+    font-size: 0.9rem;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+
+  .paymentVerification {
+    padding: 16px !important;
+  }
+
+  .paymentRow {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 4px;
+  }
+
+  .paymentValue {
+    align-self: flex-end;
+    font-weight: 800;
+  }
+
+  .approveBtn, .clearBtn {
+    padding: 18px !important;
+    font-size: 0.9rem !important;
+  }
 }

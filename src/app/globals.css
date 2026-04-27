@@ -40,16 +40,19 @@
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
   
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-tertiary: #94a3b8;
+  --text-primary: #000000;     /* Negro Puro */
+  --text-secondary: #1e293b;   /* Slate 800 - Muy oscuro */
+  --text-tertiary: #334155;    /* Slate 700 - Legible y sólido */
+  
+  --brand-primary: #854d0e;    /* Yellow 800 - Gold oscuro legible */
+  --brand-accent: #a16207;     /* Yellow 700 */
   
   --brand-light: #f1f5f9;
-  --border: #e2e8f0;
+  --border: #cbd5e1;           /* Slate 300 - Bordes más definidos */
   --glass: rgba(255, 255, 255, 0.8);
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.1);
+  --shadow-md: 0 10px 20px -5px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
 }
 
 * {

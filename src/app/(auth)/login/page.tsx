@@ -41,19 +41,34 @@ export default function LoginPage() {
         router.push('/');
       }
     } catch (err: any) {
-      setError('Credenciales incorrectas. Por favor intenta de nuevo.');
-      console.error(err);
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('El correo o la contraseña son incorrectos. Verifica tus datos.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Demasiados intentos fallidos. Tu cuenta ha sido bloqueada temporalmente.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('El formato del correo electrónico no es válido.');
+      } else {
+        setError('Ocurrió un error inesperado al iniciar sesión.');
+        console.error('Login Error:', err.code, err.message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setError('');
     try {
       await loginWithGoogle();
       router.push('/');
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err.code === 'auth/popup-closed-by-user') {
+        // Ignorar si el usuario simplemente cerró la ventana
+        console.log('Inicio de sesión cancelado por el usuario.');
+      } else {
+        setError('Error al iniciar sesión con Google. Intenta de nuevo.');
+        console.error(err);
+      }
     }
   };
 

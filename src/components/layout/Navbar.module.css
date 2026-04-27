@@ -133,4 +133,23 @@
   .center {
     display: none;
   }
+
+  /* Ocultar elementos que saturan el Top Nav en Mobile */
+  .right > div:not(.cartBtn):not(.menuBtn),
+  .right > a:not(.cartBtn):not(.menuBtn) {
+    display: none;
+  }
+
+  /* El botón de cambio de tema lo movemos al Sidebar */
+  .right > button:not(.cartBtn):not(.menuBtn) {
+    display: none;
+  }
+
+  .logo {
+    font-size: 1.2rem;
+  }
+
+  .right {
+    gap: 4px;
+  }
 }

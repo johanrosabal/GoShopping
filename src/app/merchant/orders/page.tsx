@@ -24,9 +24,24 @@ export default function MerchantOrdersPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = async () => {
-    if (!userData?.merchantId) return;
+    let mId = userData?.merchantId;
+    
+    // Auto-discovery if missing in profile
+    if (!mId && userData?.uid) {
+      const { getMerchantByOwnerUid } = await import('@/lib/services/merchants');
+      const merchant = await getMerchantByOwnerUid(userData.uid);
+      if (merchant) {
+        mId = merchant.id;
+      }
+    }
+
+    if (!mId) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    const data = await getOrdersByMerchant(userData.merchantId);
+    const data = await getOrdersByMerchant(mId);
     setOrders(data);
     setLoading(false);
   };

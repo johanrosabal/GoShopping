@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { subscribeToNotifications, Notification } from '@/lib/services/notifications';
 import { useState, useEffect } from 'react';
 import styles from './Sidebar.module.css';
+import ThemeToggle from './ThemeToggle';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -39,9 +40,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className={styles.logo}>
             Go<span className={styles.accent}>Shopping</span>
           </div>
-          <button className={styles.closeBtn} onClick={onClose}>
-            <X size={24} />
-          </button>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <ThemeToggle />
+            <button className={styles.closeBtn} onClick={onClose}>
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         <nav className={styles.nav}>

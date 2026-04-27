@@ -250,8 +250,7 @@ export default function NewMerchantPage() {
           province: formData.province,
           canton: formData.canton,
           district: formData.district,
-          country: formData.country,
-          timezone: formData.timezone
+          country: formData.country
         }
       }, agentUid);
 

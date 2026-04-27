@@ -48,17 +48,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         const unsubDoc = onSnapshot(userDocRef, async (docSnap) => {
           if (docSnap.exists()) {
-            const data = docSnap.data() as UserData;
-            // Safety: ensure johan is always admin, and blanco is always merchant
+            let data = docSnap.data() as UserData;
+            
+            // Safety: ensure johan is always admin
             if (firebaseUser.email === 'johan.manuel.rosabal@gmail.com' && data.role !== 'admin') {
               await updateDoc(userDocRef, { role: 'admin' });
-              setUserData({ ...data, role: 'admin' });
-            } else if (firebaseUser.email === 'socio.blanco.box@gmail.com' && !data.merchantId) {
-              // Ensure blanco is recognized as merchant even if DB is missing data
-              setUserData({ ...data, role: 'merchant_admin', merchantId: 'forced-merchant' });
-            } else {
-              setUserData(data);
+              data = { ...data, role: 'admin' };
             }
+
+            // AUTO-DISCOVERY: If user is merchant but has no merchantId, find it by ownerUid
+            if (!data.merchantId && (data.role === 'merchant_admin' || data.role === 'merchant_seller' || data.role === 'vendedor')) {
+              try {
+                const { getMerchantByOwnerUid } = await import('@/lib/services/merchants');
+                const merchant = await getMerchantByOwnerUid(firebaseUser.uid);
+                if (merchant) {
+                  // Temporarily inject it into state (and optionally update DB)
+                  data = { ...data, merchantId: merchant.id };
+                  // Option: await updateDoc(userDocRef, { merchantId: merchant.id });
+                }
+              } catch (e) {
+                console.error("Auto-discovery failed:", e);
+              }
+            }
+
+            setUserData(data);
           } else {
             const newUserData: UserData = {
               uid: firebaseUser.uid,

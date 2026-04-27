@@ -22,7 +22,9 @@ import {
   ExternalLink,
   Briefcase,
   Package,
-  ShoppingBag
+  ShoppingBag,
+  Zap,
+  Star
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';

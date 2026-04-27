@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Image as ImageIcon, X, Loader2, MessageSquare, CheckCircle, Clock } from 'lucide-react';
+import { Send, Image as ImageIcon, X, Loader2, MessageSquare, CheckCircle, Clock, Store, ShieldCheck } from 'lucide-react';
 import { sendMessage, subscribeToMessages, ChatMessage, markChatAsRead, ChatSession } from '@/lib/services/chat';
 import { uploadFile } from '@/lib/services/storage';
 import styles from './ChatWindow.module.css';
@@ -10,10 +10,12 @@ interface ChatWindowProps {
   userName: string;
   orderId?: string;
   orderNumber?: string;
+  merchantName?: string;
+  merchantId?: string;
   onBack?: () => void; // For mobile or list view
 }
 
-export default function ChatWindow({ chatId, userId, userName, orderId, orderNumber, onBack }: ChatWindowProps) {
+export default function ChatWindow({ chatId, userId, userName, orderId, orderNumber, merchantName, merchantId, onBack }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -78,7 +80,9 @@ export default function ChatWindow({ chatId, userId, userName, orderId, orderNum
         role: 'client',
         imageUrl,
         orderId,
-        orderNumber
+        orderNumber,
+        merchantName,
+        merchantId
       });
       
       setInputText('');
@@ -100,14 +104,20 @@ export default function ChatWindow({ chatId, userId, userName, orderId, orderNum
   return (
     <div className={styles.chatContainer}>
       {/* Optional Context Header */}
-      {(orderNumber || onBack) && (
+      {(orderNumber || merchantName || onBack) && (
         <div style={{ padding: '12px 20px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
           {onBack && <button onClick={onBack} className={styles.actionBtn} style={{ border: 'none' }}><X size={18} /></button>}
           <div style={{ flex: 1 }}>
             <h4 style={{ margin: 0, fontSize: '0.9rem' }}>
               {orderNumber ? `Consulta sobre Pedido #${orderNumber}` : 'Chat de Soporte'}
             </h4>
-            <div style={{ fontSize: '0.75rem', color: 'var(--brand-accent)', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', fontWeight: 700 }}>
+            {merchantName && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                <Store size={12} style={{ color: 'var(--brand-accent)' }} />
+                <span>Conversando con: <strong>{merchantName}</strong></span>
+              </div>
+            )}
+            <div style={{ fontSize: '0.7rem', color: 'var(--brand-accent)', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', fontWeight: 800, marginTop: '2px' }}>
               <CheckCircle size={10} /> Sesión V.I.P. Activa
             </div>
           </div>
@@ -125,16 +135,41 @@ export default function ChatWindow({ chatId, userId, userName, orderId, orderNum
           messages.map((msg, index) => (
             <div 
               key={msg.id || index} 
-              className={`${styles.messageWrapper} ${msg.senderRole === 'client' ? styles.clientMessage : styles.adminMessage}`}
+              className={styles.messageWrapper}
+              style={{ 
+                alignSelf: msg.senderRole === 'client' ? 'flex-end' : 'flex-start',
+                alignItems: msg.senderRole === 'client' ? 'flex-end' : 'flex-start',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                marginBottom: '12px'
+              }}
             >
-              <div className={styles.bubble}>
-                {msg.text && <p>{msg.text}</p>}
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginBottom: '4px', fontWeight: 700 }}>
+                {msg.senderRole === 'admin' ? '🛡️ VENDEDOR ELITE' : msg.userName || 'Cliente'}
+              </div>
+              <div 
+                className={styles.bubble}
+                style={{
+                  background: msg.senderRole === 'client' ? 'var(--brand-accent)' : '#1e293b',
+                  color: msg.senderRole === 'client' ? '#000' : '#fff',
+                  border: msg.senderRole === 'admin' ? '1px solid #334155' : 'none',
+                  borderRadius: '16px',
+                  borderBottomRightRadius: msg.senderRole === 'client' ? '2px' : '16px',
+                  borderBottomLeftRadius: msg.senderRole === 'admin' ? '2px' : '16px',
+                  padding: '10px 16px',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+                  maxWidth: '85%'
+                }}
+              >
+                {msg.text && <p style={{ margin: 0, fontWeight: 500 }}>{msg.text}</p>}
                 {msg.imageUrl && (
                   <img src={msg.imageUrl} alt="Adjunto" className={styles.imageAttachment} onClick={() => window.open(msg.imageUrl, '_blank')} />
                 )}
               </div>
-              <span className={styles.time}>
-                {msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
+              <span className={styles.time} style={{ textAlign: msg.senderRole === 'client' ? 'right' : 'left', fontSize: '0.6rem', marginTop: '4px' }}>
+                {msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'} 
+                <span style={{ marginLeft: '8px', opacity: 0.3 }}>[v2.1-{msg.senderRole}]</span>
               </span>
             </div>
           ))

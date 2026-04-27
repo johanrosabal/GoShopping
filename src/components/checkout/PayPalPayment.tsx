@@ -1,6 +1,5 @@
 'use client';
-
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { getSiteSettings, SiteSettings, DEFAULT_SETTINGS } from '@/lib/services/settings';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -14,7 +13,7 @@ interface PayPalPaymentProps {
   merchant?: MerchantProfile | null;
 }
 
-export default function PayPalPayment({ amount, onSuccess, onError, merchant }: PayPalPaymentProps) {
+const PayPalPayment = React.memo(({ amount, onSuccess, onError, merchant }: PayPalPaymentProps) => {
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
 
@@ -24,29 +23,30 @@ export default function PayPalPayment({ amount, onSuccess, onError, merchant }: 
       setSettings(data);
       setLoading(false);
     };
-    if (merchant) {
-      // We still need settings for exchange rate, but we'll use merchant for PayPal IDs
-      fetchSettings();
-    } else {
-      fetchSettings();
-    }
-  }, [merchant]);
+    fetchSettings();
+  }, []);
+
+  const paypalMode = merchant ? merchant.paymentConfig?.paypalMode : settings.paypalMode;
+  const sandboxId = merchant ? merchant.paymentConfig?.paypalSandboxClientId : settings.paypalSandboxClientId;
+  const liveId = merchant ? merchant.paymentConfig?.paypalLiveClientId : settings.paypalLiveClientId;
+  const clientId = paypalMode === 'sandbox' ? sandboxId : liveId;
+
+  const amountInUSD = useMemo(() => {
+    return (amount / settings.usdExchangeRate).toFixed(2);
+  }, [amount, settings.usdExchangeRate]);
 
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <Loader2 className="spin" size={24} color="var(--brand-accent)" />
-        <p style={{ marginTop: '10px', fontSize: '0.9rem' }}>Cargando pasarela segura...</p>
+        <p style={{ marginTop: '10px', fontSize: '0.9rem' }}>Conectando con PayPal...</p>
       </div>
     );
   }
 
   const paypalEnabled = merchant ? merchant.paymentConfig?.paypalEnabled : settings.paypalEnabled;
-  const paypalMode = merchant ? merchant.paymentConfig?.paypalMode : settings.paypalMode;
-  const sandboxId = merchant ? merchant.paymentConfig?.paypalSandboxClientId : settings.paypalSandboxClientId;
-  const liveId = merchant ? merchant.paymentConfig?.paypalLiveClientId : settings.paypalLiveClientId;
 
-  if (!paypalEnabled || (!sandboxId && !liveId)) {
+  if (!paypalEnabled || !clientId) {
     return (
       <div style={{ 
         padding: '20px', 
@@ -59,27 +59,22 @@ export default function PayPalPayment({ amount, onSuccess, onError, merchant }: 
         gap: '12px'
       }}>
         <AlertTriangle size={20} />
-        <p style={{ fontSize: '0.85rem' }}>
-          {merchant 
-            ? 'PayPal no está configurado correctamente para este comercio.' 
-            : 'PayPal no está configurado correctamente en los ajustes globales.'}
-        </p>
+        <p style={{ fontSize: '0.85rem' }}>Configuración de PayPal incompleta.</p>
       </div>
     );
   }
 
-  const clientId = paypalMode === 'sandbox' ? sandboxId : liveId;
-
-  // Convert CRC to USD
-  const amountInUSD = (amount / settings.usdExchangeRate).toFixed(2);
-
   return (
     <div style={{ width: '100%', marginTop: '20px' }}>
-      <PayPalScriptProvider options={{ 
-        clientId: clientId,
-        currency: 'USD',
-        intent: 'capture'
-      }}>
+      <PayPalScriptProvider 
+        key={clientId} 
+        options={{ 
+          clientId: clientId as string,
+          currency: 'USD',
+          intent: 'capture',
+          "disable-funding": "credit,card"
+        }}
+      >
         <PayPalButtons 
           style={{ 
             layout: 'vertical',
@@ -87,7 +82,6 @@ export default function PayPalPayment({ amount, onSuccess, onError, merchant }: 
             shape: 'rect',
             label: 'paypal'
           }}
-          disabled={!clientId}
           createOrder={(data, actions) => {
             return actions.order.create({
               intent: 'CAPTURE',
@@ -102,11 +96,11 @@ export default function PayPalPayment({ amount, onSuccess, onError, merchant }: 
               ],
             });
           }}
-          onApprove={async (data, actions) => {
-            if (actions.order) {
-              const details = await actions.order.capture();
+          onApprove={(data, actions) => {
+            if (!actions.order) return Promise.reject("No order action available");
+            return actions.order.capture().then((details) => {
               onSuccess(details);
-            }
+            });
           }}
           onError={(err) => {
             console.error("PayPal Error:", err);
@@ -114,30 +108,13 @@ export default function PayPalPayment({ amount, onSuccess, onError, merchant }: 
           }}
         />
       </PayPalScriptProvider>
-      <div style={{ 
-        textAlign: 'center', 
-        marginTop: '12px', 
-        fontSize: '0.75rem', 
-        color: 'var(--text-tertiary)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px'
-      }}>
-        <span>Tasa de cambio aplicada: 1 USD = ₡{settings.usdExchangeRate}</span>
-        {paypalMode === 'sandbox' && (
-          <span style={{ 
-            background: 'var(--status-warning)', 
-            color: 'black', 
-            padding: '2px 6px', 
-            borderRadius: '4px',
-            fontWeight: 800,
-            fontSize: '0.6rem'
-          }}>
-            MODO SANDBOX
-          </span>
-        )}
+      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+        <span>Tasa: 1 USD = ₡{settings.usdExchangeRate}</span>
+        {paypalMode === 'sandbox' && <span style={{ marginLeft: '10px', color: 'var(--status-warning)' }}>SANDBOX</span>}
       </div>
     </div>
   );
-}
+});
+
+PayPalPayment.displayName = 'PayPalPayment';
+export default PayPalPayment;

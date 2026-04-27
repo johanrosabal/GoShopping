@@ -10,9 +10,13 @@ import { useCart } from '@/context/CartContext';
 import AddToListButton from '@/components/catalog/AddToListButton';
 import StatusModal, { ModalType } from '@/components/common/StatusModal';
 import ProductCard from '@/components/catalog/ProductCard';
+import { useSearchParams } from 'next/navigation';
 import styles from './Catalog.module.css';
 
 export default function CatalogPage() {
+  const searchParams = useSearchParams();
+  const queryParam = searchParams.get('q');
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>(['Todos']);
@@ -51,28 +55,31 @@ export default function CatalogPage() {
       allProducts = data;
       setProducts(data);
       
-      // Update filtered list based on active category
+      // Update filtered list based on active category AND search query
       const activeOnly = data.filter(p => p.isActive !== false);
-      if (activeCategory === 'Todos') {
-        setFilteredProducts(activeOnly);
-      } else {
-        setFilteredProducts(activeOnly.filter(p => p.category === activeCategory));
+      let filtered = activeOnly;
+
+      if (activeCategory !== 'Todos') {
+        filtered = filtered.filter(p => p.category === activeCategory);
       }
-      
+
+      if (queryParam) {
+        const q = queryParam.toLowerCase();
+        filtered = filtered.filter(p => 
+          p.name.toLowerCase().includes(q) || 
+          p.description.toLowerCase().includes(q)
+        );
+      }
+
+      setFilteredProducts(filtered);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [activeCategory]);
+  }, [activeCategory, queryParam]);
 
   const handleFilter = (category: string) => {
     setActiveCategory(category);
-    const activeOnly = products.filter(p => p.isActive !== false);
-    if (category === 'Todos') {
-      setFilteredProducts(activeOnly);
-    } else {
-      setFilteredProducts(activeOnly.filter(p => p.category === category));
-    }
   };
 
   const handleSeed = () => {
@@ -117,8 +124,18 @@ export default function CatalogPage() {
   return (
     <div className={`${styles.catalog} container`}>
       <header className={styles.header}>
-        <h1>Catálogo de <span className={styles.accent}>Excelencia</span></h1>
-        <p>Selección curada de los mejores productos del mercado.</p>
+        <h1>
+          {queryParam ? (
+            <>Resultados para: <span className={styles.accent}>"{queryParam}"</span></>
+          ) : (
+            <>Catálogo de <span className={styles.accent}>Excelencia</span></>
+          )}
+        </h1>
+        <p>
+          {queryParam 
+            ? `Hemos encontrado ${filteredProducts.length} productos que coinciden con tu búsqueda.`
+            : 'Selección curada de los mejores productos del mercado.'}
+        </p>
       </header>
 
       <div className={styles.filters}>
